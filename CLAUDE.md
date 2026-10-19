@@ -65,7 +65,13 @@ Use this structure for every step that produces code or configuration:
 - **H. What did I learn?** — concept summary.
 
 Explain the *reasoning* behind architecture choices and trade-offs, using examples from this
-game. Keep steps small. Ask only questions that genuinely block progress; state assumptions.
+game. Keep steps small.
+
+**Make technical decisions yourself.** The owner is a beginner and has asked not to be given
+technical choices to pick from (folder names, libraries, structure). Choose the
+industry-standard option, explain why in plain English, record it in `docs/DECISIONS.md`,
+and proceed. Ask only about things that genuinely require the owner: their accounts,
+credentials, money/billing, personal preferences, or destructive actions.
 
 ## 5. Architecture principles
 
@@ -75,9 +81,9 @@ game. Keep steps small. Ask only questions that genuinely block progress; state 
   server can re-run them.
 - The panorama (Google Embed), the guessing map (Leaflet) and the game logic are independent
   modules that communicate only through our own typed data.
-- Next.js (App Router) handles frontend and backend at first. Add a separate Node service
-  (the reserved `Server/` folder) only when genuinely required — expected for real-time
-  multiplayer in Phase 9 — and only after explaining why.
+- Next.js (App Router) handles frontend and backend, and the app lives at the **repo root**
+  (D-003). Add a separate Node service only when genuinely required (expected for real-time
+  multiplayer in Phase 9), and only after explaining why.
 - No unnecessary abstractions, libraries or design patterns. Small focused files, no
   giant components, no duplicate implementations.
 - **Build order is backend first** (`docs/DECISIONS.md` D-006): logic, models and API are

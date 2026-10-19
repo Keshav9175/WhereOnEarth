@@ -7,13 +7,14 @@
 
 ```
 WhereOnEarth/
+├── .git/              ← Git history (remote: github.com/Keshav9175/WhereOnEarth)
+├── .gitignore         ← files Git must never track
 ├── CLAUDE.md          ← instructions for Claude Code
 ├── docs/              ← project documentation
-├── Server/            ← empty; reserved (see "The Server/ folder")
 └── .claude/           ← created automatically by Claude Code tooling; not part of the game
 ```
 
-No application code, dependencies, Git repository, or environment variables exist yet.
+No application code, dependencies, or environment variables exist yet. Git is set up (Phase 1).
 
 ## Planned architecture — big picture
 
@@ -29,24 +30,27 @@ No application code, dependencies, Git repository, or environment variables exis
             ├──iframe──▶ Google Maps Embed API (panorama)
             └──tiles───▶ OSM-compatible tile provider (guess map)
 
- Phase 9: Browser ⇄ WebSocket service (Server/ folder) for real-time multiplayer
+ Phase 9: Browser ⇄ separate WebSocket service (folder created then) for multiplayer
 ```
 
-## Planned folder layout (proposed — confirmed in Phase 2)
+## Planned folder layout (decided: app at the repo root, D-003)
 
 ```
-WhereOnEarth/
-├── web/                     # the Next.js app: UI + API routes (folder name pending, D-003)
-│   ├── src/app/             # routes: pages (page.tsx) and API (api/**/route.ts)
-│   ├── src/components/      # React UI components (PanoramaView, GuessMap, ...)
-│   ├── src/hooks/           # reusable React hooks (useTimer, ...)
-│   ├── src/lib/game/        # pure game logic: distance, scoring (no React, no I/O)
-│   ├── src/lib/validation/  # request schemas
-│   ├── src/server/          # server-only code: services, DB connection, models
-│   └── src/types/           # shared TypeScript types (Location, Guess, Round, Game)
-├── Server/                  # reserved for a separate real-time service (Phase 9)
-└── docs/
+WhereOnEarth/                # the Next.js app lives directly here
+├── src/app/                 # routes: pages (page.tsx) and API (api/**/route.ts)
+├── src/components/          # React UI components (PanoramaView, GuessMap, ...)
+├── src/hooks/               # reusable React hooks (useTimer, ...)
+├── src/lib/game/            # pure game logic: distance, scoring (no React, no I/O)
+├── src/lib/validation/      # request schemas
+├── src/server/              # server-only code: services, DB connection, models
+├── src/types/               # shared TypeScript types (Location, Guess, Round, Game)
+├── public/                  # static files (images, icons)
+├── docs/                    # documentation
+├── package.json             # dependencies and npm scripts
+└── CLAUDE.md
 ```
+
+Folders are created only when a phase needs them, not all at once.
 
 **Why separate these folders?** Each folder answers one question. *Where is the UI?*
 `components/`. *Where are the rules?* `lib/game/`. *What may touch the database?* Only
@@ -138,15 +142,8 @@ Leaderboards are queries over `games`.
   Ordinary HTTP only answers requests, so we need **WebSockets**, which keep a persistent
   two-way connection.
 - Serverless hosting (a common way Next.js is deployed) does not keep long-lived
-  connections. So the likely design is a **separate Node.js WebSocket service** in
-  `Server/`, sharing game logic and types with the web app.
+  connections. So the likely design is a **separate Node.js WebSocket service** in its
+  own folder (created in Phase 9), sharing game logic and types with the web app.
 - Room state (players, current round, timers) lives in that service's memory. **Redis**
   only becomes necessary if we run several instances that must share room state.
 - The server stays authoritative: it runs timers, holds answers, and computes scores.
-
-## The `Server/` folder
-The owner created `Server/` before the project started. It is **kept empty for now**.
-Decision D-003: the backend uses Next.js API routes, so `Server/` is reserved for the
-Phase 9 real-time service.
-The capital "S" may matter on case-sensitive systems (Linux hosting, some Git setups). A
-rename to lowercase `server/` is proposed but **will not happen without approval**.

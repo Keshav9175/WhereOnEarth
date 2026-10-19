@@ -56,7 +56,7 @@ HTTP requests directly with a tool and reading the JSON reply. That makes it obv
 work belongs to the server (rules, truth, saving) and which to the client (display).
 → `docs/DECISIONS.md` D-006
 
-### Separate backend vs framework API routes
+### Separate backend vs framework API routes (Phase 0)
 Many companies run a standalone API server (e.g. Express) that websites and mobile apps
 share. Next.js API routes instead put the API inside the web app's project: one codebase
 and one deployment. The core ideas (routes, requests, responses, validation, databases)
@@ -70,3 +70,42 @@ pool. → `docs/ARCHITECTURE.md` → *Location selection*
 ### Architecture decision record
 A short note saying what we decided, why, and what we rejected. It lets future-you understand
 past choices. → `docs/DECISIONS.md`
+
+---
+
+## Phase 1 — Git and GitHub
+
+### Working tree → staging area → commit → push
+- **Working tree:** your files on disk right now.
+- **Staging area:** the changes you picked for the next snapshot (`git add`).
+- **Commit:** a saved snapshot with a message (`git commit -m "..."`). Stored locally only.
+- **Push:** uploads your commits to a remote (`git push`).
+`git status` tells you where every changed file currently is in that flow.
+
+### `.gitignore`
+Lists files Git must never track: secrets (`.env*`), downloaded packages (`node_modules/`),
+generated output (`.next/`), and local tool data (`.rune/`). It is created **before** the first commit
+because anything committed stays in history even after deletion. → `.gitignore`
+
+### Branch (`main`)
+A named line of history. We work on `main` for now. `git init -b main` names it to match GitHub.
+
+### Remote (`origin`)
+A copy of the repository elsewhere, here on GitHub. `origin` is the conventional nickname.
+`git remote -v` shows it. `push -u` links local `main` to `origin/main` once, so later just
+`git push` works.
+
+### Commit identity vs login
+Two different things that are easy to confuse:
+- `git config user.name/user.email` is the **label** written on each commit, and it is public on GitHub.
+- The **login** (Git Credential Manager) proves you may push. A 403 "denied to <other user>"
+  means the login is wrong, not the commit identity. Local config (no `--global`) applies to one
+  repository only.
+
+### Amend: only before pushing
+`git commit --amend` replaces the latest commit. It is safe only if that commit has not been pushed,
+because rewriting shared history breaks other copies. After pushing, fix things with a new commit.
+
+### Line endings (LF vs CRLF warnings)
+Windows ends text lines with CRLF, while Linux and macOS use LF. Git converts automatically, and the
+warning is informational.

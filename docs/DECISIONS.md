@@ -27,21 +27,23 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
   control and no load-failure signal.
 - **Status:** Accepted (2026-10-19).
 
-## D-003 — Backend lives in Next.js API routes; `Server/` stays reserved
-- **Context:** the owner considered a separate Express + TypeScript backend in `Server/`
-  versus Next.js API routes.
-- **Decision:** use **Next.js API routes** (route handlers) for the backend. `Server/` stays
-  empty, reserved for the Phase 9 real-time WebSocket service if it is needed.
+## D-003 — Backend lives in Next.js API routes; app at the repo root
+- **Context:** the owner considered a separate Express + TypeScript backend versus Next.js
+  API routes. The original empty `Server/` folder was later deleted by the owner.
+- **Decision:** use **Next.js API routes** (route handlers) for the backend. The Next.js
+  app lives at the **repository root** (`WhereOnEarth/`), not in a subfolder.
+- **Why root:** this is the standard layout for a single application. Commands run from the
+  project folder with no extra `cd`, and it matches official docs and most tutorials. If Phase 9
+  needs a separate WebSocket service, it gets its own folder then.
 - **Reasons:** one project and one deployment. Frontend and backend share TypeScript types
   directly, and there is no CORS configuration (rules that allow one website to call another's API).
-- **Alternatives:** Express in `Server/`. This is very common in industry, makes HTTP fully explicit,
-  and would double as the WebSocket server. It was rejected for now in favor of simplicity.
+- **Alternatives:** a separate Express backend. This is very common in industry, makes HTTP fully
+  explicit, and would double as the WebSocket server. It was rejected for now in favor of simplicity.
+  For placement, a `web/` subfolder (a "monorepo" layout) was the alternative. It is only useful once
+  there are several apps, and we can restructure then if needed.
 - **Trade-offs:** Next.js abstracts some HTTP plumbing, which we compensate for by explaining it in
   Phase 2 and Phase 5. Multiplayer will still likely need a separate service.
-- **Still open (decided at Phase 2 scaffolding):** create the app in a `web/` subfolder
-  (recommended, keeps it separate from `Server/` and `docs/`) or at the repo root; and whether to rename
-  `Server/` → `server/`.
-- **Status:** Accepted (owner, 2026-10-19). Folder placement is pending.
+- **Status:** Accepted (2026-10-19).
 
 ## D-004 — Location selection strategy
 - **Context:** random coordinates rarely have Street View coverage, and the Embed iframe gives

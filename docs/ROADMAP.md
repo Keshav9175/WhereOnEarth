@@ -10,7 +10,7 @@ before any game UI exists.
 | Phase | Name | Depends on | Status |
 |---|---|---|---|
 | 0 | Project inspection, workflow, documentation | — | **Complete** |
-| 1 | Dev environment, Git, foundational setup | 0 | **In progress** |
+| 1 | Dev environment, Git, foundational setup | 0 | **Complete** |
 | 2 | Next.js project + backend skeleton (first API route) | 1 | Not started |
 | 3 | Game logic: distance & scoring (pure functions + unit tests) | 2 | Not started |
 | 4 | MongoDB, Mongoose, data models | 2 | Not started |
@@ -35,12 +35,13 @@ before any game UI exists.
 - [x] `CLAUDE.md` and all `docs/*.md` files created and mutually consistent.
 - [x] Owner reviewed the plan and chose: backend-first order (D-006) and Next.js API routes (D-003).
 
-## Phase 1 — Development environment & Git
+## Phase 1 — Development environment & Git ✅
 **Goal:** a safe, version-controlled starting point.
-**Includes:** verify Node/npm/Git, `git init`, `.gitignore` (secrets, dependencies, build
-output, local tool data), Git identity check, first commit of the docs, optional GitHub remote.
-**Acceptance:** the first commit exists, `git status` is clean, `.gitignore` excludes `.env*`, and the owner can
-explain the working tree, the staging area and a commit.
+- [x] Node/npm/Git verified.
+- [x] `.gitignore` excludes secrets, dependencies, build output, local tool data (`.claude/data/`, `.rune/`).
+- [x] `git init -b main`, repo-local identity `Keshav9175 <keshavdivate86@gmail.com>`.
+- [x] First commit `2cc11ad`, pushed to `https://github.com/Keshav9175/WhereOnEarth` (`main`).
+- [ ] The owner can explain the working tree → staging area → commit → push flow (self-check).
 
 ## Phase 2 — Next.js project + backend skeleton
 **Goal:** create the Next.js + TypeScript project and a first API route.
@@ -94,7 +95,7 @@ marker placement; finalize the location-selection strategy (D-004).
 
 ## Phase 9 — Multiplayer & WebSockets
 **Goal:** real-time rooms.
-**Includes:** architecture review, WebSocket service (likely in `Server/`), rooms, server
+**Includes:** architecture review, WebSocket service (separate folder, created then), rooms, server
 timers, synchronized rounds, reconnection, and Redis only if justified.
 **Acceptance:** two browsers can play a synchronized round with server-computed scores.
 

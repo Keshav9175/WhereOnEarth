@@ -29,7 +29,7 @@ Status: **Planned** = agreed, not installed · **In use** = installed and workin
 | **Next.js Route Handlers** (`app/api/**/route.ts`) | Server code that answers HTTP requests, e.g. `POST /api/games`. | Built into Next.js, runs only on the server, so secrets stay safe. | 2, 5 | Planned |
 | **Test runner** (likely Vitest) | Runs automated tests of our functions and routes. | Proves game logic is correct. Chosen and approved in Phase 3. | 3 | Candidate |
 | **Validation library** (likely Zod) | Checks that incoming request data has the right shape and ranges. | Never trust the client. Approved in Phase 5. | 5 | Candidate |
-| **Separate Node.js service (`Server/` folder)** | A long-running process. | Only for real-time WebSockets (Phase 9), because serverless hosting does not keep connections open. | 9 | Reserved |
+| **Separate Node.js service** (own folder, created in Phase 9) | A long-running process. | Only for real-time WebSockets (Phase 9), because serverless hosting does not keep connections open. | 9 | Only if needed |
 
 ## Database
 
