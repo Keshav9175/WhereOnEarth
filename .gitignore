@@ -1,0 +1,30 @@
+# --- Secrets: never commit real environment values ---
+.env
+.env.*
+!.env.example
+
+# --- Dependencies (re-created by `npm install`) ---
+node_modules/
+
+# --- Next.js build output (re-created by `npm run build` / `npm run dev`) ---
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# --- Logs and debug files ---
+npm-debug.log*
+*.log
+
+# --- Test coverage reports ---
+coverage/
+
+# --- Local tool data (machine-specific, not part of the project) ---
+.claude/data/
+.claude/settings.local.json
+.rune/
+
+# --- Operating system / editor clutter ---
+.DS_Store
+Thumbs.db

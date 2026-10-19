@@ -1,0 +1,61 @@
+# Development Workflow
+
+Sections marked *(from Phase N)* describe things that do not exist yet. Exact commands are
+added when that phase is implemented.
+
+## 1. Starting a work session
+1. Open `C:\KIKI\WhereOnEarth` in VS Code.
+2. Start Claude Code. It reads `CLAUDE.md` automatically.
+3. Ask Claude to read `docs/PROGRESS.md` and summarize where we are, or just type `NEXT`
+   if the previous phase or step is verified.
+4. *(from Phase 1)* Run `git status` to make sure you know what has changed since the last commit.
+
+## 2. Terminals and working directories
+- Commands are always given with a working directory, e.g. *"Terminal, in
+  `C:\KIKI\WhereOnEarth\web`"*. Running a command in the wrong folder is the most common
+  beginner error.
+- The VS Code terminal on Windows defaults to PowerShell. Commands will be given in a form that works there.
+
+## 3. Running the app *(from Phase 2)*
+- `npm run dev` starts the development server with live reload (usually at http://localhost:3000).
+- `npm run build` builds the production version and catches type and build errors.
+- `npm run start` runs the production build locally.
+Exact folder and scripts are confirmed in Phase 2.
+
+## 4. Testing changes
+- Every phase ends with a **manual checklist** (Claude provides it, and you run it).
+- *(from Phase 2)* **HTTP client testing:** the backend is built before the UI, so we call API routes
+  with Thunder Client (a VS Code extension) or `curl` and read the JSON responses.
+- *(from Phase 3)* Unit tests for game logic, run with an `npm test` script defined then.
+- *(from Phase 5)* API tests for valid and invalid requests.
+- If something fails, stop and debug with Claude before continuing. Never skip a failing check.
+
+## 5. Environment variables *(from Phase 4)*
+- Real values go in a local env file (Next.js uses `.env.local`), which is **never committed**.
+- `.env.example` is committed with placeholder values and lists every variable needed.
+- Variables prefixed `NEXT_PUBLIC_` are bundled into browser code, so they are **visible to
+  everyone**. Use the prefix only for restricted public keys (e.g. the Embed API key in Phase 8).
+- The first real variable is the MongoDB connection string in Phase 4. It must never get the prefix.
+- Everything else (DB URI, auth secret, server-only keys) has no prefix and is read only in server code.
+- After changing env files, restart `npm run dev`.
+- If a secret is ever committed: tell Claude immediately, **rotate (replace) the key** in
+  the provider's console, then clean up. Deleting the file alone does not remove it from Git history.
+
+## 6. Git workflow *(from Phase 1)*
+- Commit at the end of each phase (or meaningful step) with a clear message describing what changed.
+- Before committing: `git status` (what changed?) → `git diff` (how?) → stage → commit.
+- Claude explains every Git command before you run it and never commits or pushes unless you ask.
+- Destructive commands (`git reset --hard`, `git push --force`, deleting branches) require
+  an explanation of the impact and your explicit confirmation.
+
+## 7. Working safely with Claude Code
+- **Read before approving.** When Claude asks permission to run a command or edit a file,
+  read what it does. Ask "why?" whenever you are unsure.
+- **One phase at a time.** Claude must not build future-phase features. If it starts to,
+  say "stop: that's Phase X".
+- **Ask for explanations.** "Explain this line" or "what breaks if I remove this?" are always
+  valid requests.
+- **Type it yourself sometimes.** Retyping a small file by hand is one of the best ways to learn it.
+- **Docs stay current.** At the end of each phase Claude updates `ROADMAP.md`,
+  `PROGRESS.md` and `LEARNING_GUIDE.md`. Check that they match reality.
+- **Never paste real secrets into chat** unless necessary. Prefer placing them directly in `.env.local` yourself.
