@@ -16,7 +16,7 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
 - **Status:** Accepted (2026-10-19).
 
 ## D-002 — Initial technology stack
-- **Decision:** Next.js (App Router) + React + TypeScript; plain CSS (CSS Modules);
+- **Decision:** Next.js (App Router) + React + TypeScript; plain CSS (CSS Modules) — *superseded by D-016: Tailwind CSS*;
   Google Maps Embed API for panoramas; Leaflet + OSM-compatible tiles for the guessing map;
   Next.js route handlers for the backend; MongoDB + Mongoose on Atlas. Auth, WebSockets and
   Redis are deferred to later phases. Details: `TECH_STACK.md`.
@@ -105,6 +105,65 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
   makes re-runs safe.
 - **Alternatives:** Node's native type stripping (cannot resolve `@/` aliases); an admin API route (security risk).
 - **Status:** Accepted (2026-10-20).
+
+## D-011 — Authentication: Better Auth with email + password
+- **Decision:** Better Auth 1.7 (`src/server/auth.ts`), MongoDB adapter (reusing Mongoose's
+  driver via `mongoose.mongo.MongoClient`), email + password (min 8 chars), `nextCookies` plugin.
+  Mounted at `/api/auth/[...all]`. Env: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`.
+- **Reasons:** stable (1.x), officially supports Next.js 16 and MongoDB, no schema migrations for
+  MongoDB, hashes passwords and manages sessions/cookies for us, and has built-in CSRF origin checks
+  and rate limiting. Email + password needs no third-party accounts.
+- **Alternatives:** Auth.js / next-auth v5 (still beta; discourages credentials login); writing auth ourselves
+  (high security risk); Google/GitHub login (needs OAuth app setup, which can be added later as a Better Auth provider).
+- **Trade-offs:** no email verification or password reset yet (both need an email-sending service). Revisit before
+  launch (Phase 10).
+- **Status:** Accepted (2026-10-20).
+
+## D-012 — Game ownership and guest play
+- **Decision:** `Game.userId` = the signed-in player's id, or `null` for guests. A player's game is visible
+  and playable only by that player. Others get **404**, not 403, so we don't reveal that it exists. Guest games
+  stay accessible to anyone holding the id. Guest games never appear in history or the leaderboard.
+- **Reasons:** keeps the game playable without an account, while protecting players' games.
+- **Status:** Accepted (2026-10-20).
+
+## D-013 — Leaderboard = best completed game per player
+- **Decision:** rank players by their single best completed game (ties: earlier `completedAt` wins).
+  Show display name, best score, games completed, and date. **Never e-mail.** `?limit=` 1–50.
+  Added `Game.completedAt` and indexes `{userId, createdAt}` and `{status, userId, totalScore}`.
+- **Alternatives:** sum of all scores (rewards playing more, not playing better); average (noisy with few games).
+- **Status:** Accepted (2026-10-20).
+
+## D-014 — Street View via the Embed iframe; the current round's location is sent to the browser
+- **Decision:** `PublicGame.currentPanorama` = the coordinates of the **current** round only (null when
+  finished). `src/components/StreetViewPanorama.tsx` renders
+  `https://www.google.com/maps/embed/v1/streetview?key=…&location=lat,lng`. The key is the public
+  `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY`, restricted by HTTP referrer and to the Maps Embed API.
+- **Reasons:** the Embed API is documented as no-charge and unlimited. The iframe cannot work without a location.
+- **Trade-off (accepted, documented):** a determined player can read the current round's coordinates
+  in the browser's developer tools. Countries and future rounds stay hidden, and scoring stays server-side.
+  Possible improvement: send a panorama ID (via the server-side Street View metadata endpoint) instead of coordinates.
+- **Alternatives:** Maps JavaScript API Street View (billed; still exposes the location to the browser).
+- **Status:** Accepted (2026-10-20). Done ahead of Phase 7 at the owner's request.
+
+## D-015 — Guessing map: Leaflet + OpenStreetMap tiles (dev), configurable provider
+- **Decision:** `src/components/GuessMap.tsx` (react-leaflet 5 / Leaflet 1.9.4), loaded client-only via
+  `next/dynamic({ ssr: false })` in `GuessMapLoader.tsx`. Markers are `CircleMarker`s (no image assets).
+  Clicks use `latlng.wrap()` so longitude stays in −180..180. Tiles are `tile.openstreetmap.org`, overridable with
+  `NEXT_PUBLIC_MAP_TILE_URL` / `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION` (`src/lib/map/tiles.ts`).
+- **Reasons:** free, open source, independent of Google. The OSM tile policy allows light interactive use with
+  visible attribution, HTTPS and no bulk downloads, but has no SLA and is not meant for production traffic.
+- **Before launch (Phase 10):** switch to a production tile provider or self-hosting.
+- **Status:** Accepted (2026-10-20).
+
+## D-016 — Styling with Tailwind CSS v4 (supersedes the "plain CSS / CSS Modules" part of D-002)
+- **Decision:** Tailwind CSS 4.3.3 via `@tailwindcss/postcss` (`postcss.config.mjs`) and `@import "tailwindcss"`
+  in `src/app/globals.css`. Our palette lives in CSS variables (light + dark), exposed to Tailwind with
+  `@theme inline` as `bg`, `fg`, `muted`, `primary`, `primary-fg`, `card`, `border`, `error`
+  (e.g. `bg-primary`, `text-muted`). No CSS Module files remain. Leaflet keeps its own `leaflet.css`.
+- **Reasons:** the owner's choice. Tailwind is the industry standard for React/Next.js, keeps styles next to the markup,
+  and ships only the classes we use.
+- **Trade-offs:** long `className` strings. Repeated lists are kept in constants (e.g. `BUTTON`, `CARD` in `PlayGame.tsx`).
+- **Status:** Accepted (owner, 2026-10-20).
 
 ## D-006 — Backend-first build order
 - **Context:** the owner wants to build the backend (models, API) before the frontend.

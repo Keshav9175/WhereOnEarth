@@ -14,8 +14,8 @@ before any game UI exists.
 | 2 | Next.js project + backend skeleton (first API route) | 1 | **Complete** |
 | 3 | Game logic: distance & scoring (pure functions + unit tests) | 2 | **Complete** |
 | 4 | MongoDB, Mongoose, data models | 2 | **Complete** |
-| 5 | Game API: routes, validation, server-side scoring, history | 3, 4 | Not started |
-| 6 | Authentication, users, leaderboards (API) | 5 | Not started |
+| 5 | Game API: routes, validation, server-side scoring, history | 3, 4 | **Complete** |
+| 6 | Authentication, users, leaderboards (API) | 5 | **Complete** (owner manual test pending) |
 | 7 | Frontend fundamentals: game UI calling our API | 5 (6 for accounts UI) | Not started |
 | 8 | Google Street View Embed + Leaflet guessing map | 7 | Not started |
 | 9 | Multiplayer architecture and WebSockets | 5, 8 | Not started |
@@ -74,23 +74,27 @@ testing it with an HTTP client, and how a request reaches a route handler.
 - [x] DB URI appears nowhere in Git.
 - [ ] Self-check: the owner can explain schema vs model vs document.
 
-## Phase 5 — Game API
+## Phase 5 — Game API ✅
 **Goal:** a complete single-player game playable through HTTP requests alone.
-**Includes:** `POST /api/games`, `GET /api/games/{id}`, `POST /api/games/{id}/guess`,
-request validation, service layer, server-held answers, server-computed scores, consistent
-error responses, game history endpoint, and API tests.
-**Acceptance:** a 5-round game can be played with an HTTP client, the answer is never exposed before the guess,
-invalid input is rejected with clear errors, and tests pass.
+- [x] `POST /api/games`, `GET /api/games/{id}`, `POST /api/games/{id}/guess` (owner wrote these from chat).
+- [x] Service layer, server-held answers, server-computed scores, safe public view (`toPublicGame`).
+- [x] Zod validation (400), 404/409/500 handling, atomic guard against double-scoring.
+- [x] A full 5-round game played via HTTP. The answer is never exposed early. Tests pass.
+- History endpoint moved to Phase 6 (`/api/me/games`), because history needs a signed-in user.
 
-## Phase 6 — Authentication, users, leaderboards
+## Phase 6 — Authentication, users, leaderboards ✅ (built by Claude at the owner's request)
 **Goal:** accounts, ownership of games, and rankings.
-**Includes:** compare and choose an auth solution, `User` model, sign-in/out, protecting
-routes, linking games to users, leaderboard queries.
-**Acceptance:** users can only access their own private data, and the leaderboard endpoint is correct.
+- [x] Better Auth (email + password), stored in MongoDB (`user`, `session`, `account`) (D-011).
+- [x] Games are owned by the signed-in player (`userId`). Guests can still play (D-012).
+- [x] Other players and guests get 404 on someone else's game (view and guess).
+- [x] `GET /api/me` (profile + stats), `GET /api/me/games` (history), `GET /api/leaderboard` (D-013).
+- [x] 28 unit tests. Typecheck, lint and production build are clean. A 22-step end-to-end test passed
+      on 2026-10-20 (test data deleted afterwards).
+- [ ] The owner restarts `npm run dev` and runs the manual test checklist.
 
 ## Phase 7 — Frontend fundamentals
 **Goal:** a game UI that uses our API.
-**Includes:** components, props, state, events, fetching from our API, CSS Modules,
+**Includes:** components, props, state, events, fetching from our API, Tailwind CSS,
 responsive layout, loading/error states, basic accessibility, round result + summary
 screens, a timer, and placeholder panorama/map areas.
 **Acceptance:** a full game can be played in the browser using placeholders, works at mobile and desktop widths, and is committed.

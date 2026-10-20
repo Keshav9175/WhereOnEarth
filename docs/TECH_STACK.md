@@ -26,9 +26,9 @@ Status: **Planned** = agreed, not installed · **In use** = installed and workin
 
 | Technology | What it does | Why | Phase | Status |
 |---|---|---|---|---|
-| **Next.js Route Handlers** (`app/api/**/route.ts`) | Server code that answers HTTP requests, e.g. `POST /api/games`. | Built into Next.js, runs only on the server, so secrets stay safe. | 2, 5 | Planned |
+| **Next.js Route Handlers** (`app/api/**/route.ts`) | Server code that answers HTTP requests, e.g. `POST /api/games`. | Built into Next.js, runs only on the server, so secrets stay safe. | 2, 5 | In use |
 | **Vitest** 5.0.5 | Runs automated tests of our functions and routes. | Recommended in the Next.js docs, fast, native TypeScript. `npm test`. | 3 | In use |
-| **Validation library** (likely Zod) | Checks that incoming request data has the right shape and ranges. | Never trust the client. Approved in Phase 5. | 5 | Candidate |
+| **Zod** 4.6.7 | Checks that incoming request data has the right shape and ranges. | Never trust the client. Industry standard, and its types are inferred from the rules. | 5 | In use |
 | **Separate Node.js service** (own folder, created in Phase 9) | A long-running process. | Only for real-time WebSockets (Phase 9), because serverless hosting does not keep connections open. | 9 | Only if needed |
 
 ## Database
@@ -43,25 +43,25 @@ Status: **Planned** = agreed, not installed · **In use** = installed and workin
 
 | Technology | Purpose | Phase | Status |
 |---|---|---|---|
-| Auth solution (e.g. Auth.js or another maintained option) | Sign-in, sessions, profiles. Compared and chosen in Phase 6. | 6 | Candidate |
+| **Better Auth** 1.7.11 | Email and password sign-up/sign-in, sessions (cookies), MongoDB storage (D-011). | 6 | In use |
 
 ## Frontend
 
 | Technology | What it does | Why | Phase | Status |
 |---|---|---|---|---|
 | **React** | Builds the UI from components that re-render when their data (state) changes. | Next.js is built on it, and it is the industry standard. | 7 | Planned |
-| **CSS (CSS Modules + one global stylesheet)** | Styling. CSS Modules scope class names to one component. | Built into Next.js, no extra library, and teaches real CSS. | 7 | Planned |
+| **Tailwind CSS** 4.3.3 | Utility classes in `className` (e.g. `flex p-4 bg-primary`), compiled by PostCSS. Our colours are defined once in `globals.css` (D-016). | The owner's choice. Industry standard, and only used classes are shipped. | 7 | In use |
 
-*Trade-off worth knowing:* Tailwind CSS styles with utility classes. We skip it so you
+*Note:* plain CSS Modules were the original plan (D-002). Switched to Tailwind (D-016).
 learn plain CSS first. It could be adopted later through `DECISIONS.md`.
 
 ## Maps and Street View (Phase 8)
 
 | Technology | What it does | Why | Status |
 |---|---|---|---|
-| **Google Maps Embed API (Street View mode)** | An `<iframe>` showing an interactive panorama. | Google documents it as **no charge, unlimited requests**. It still needs a Google Cloud project with a **billing account** and an API key. | Planned |
-| **Leaflet** | Interactive map: pan, zoom, click to place a marker, draw lines. | Free, open source, simple, and independent of Google. | Planned |
-| **OSM-compatible tile provider** | Supplies the map images ("tiles") Leaflet displays. | Not chosen yet. The public `tile.openstreetmap.org` server has a usage policy for light use, so we compare providers in Phase 8. | Planned (provider TBD) |
+| **Google Maps Embed API (Street View mode)** | An `<iframe>` showing an interactive panorama. | Google documents it as **no charge, unlimited requests**. It still needs a Google Cloud project with a **billing account** and an API key. | In use (D-014) |
+| **Leaflet** 1.9.4 + react-leaflet 5.0.0 | Interactive map: pan, zoom, click to place a marker, draw lines. | Free, open source, simple, and independent of Google. | In use |
+| **OSM-compatible tile provider** | Supplies the map images ("tiles") Leaflet displays. | Not chosen yet. The public `tile.openstreetmap.org` server has a usage policy for light use, so we compare providers in Phase 8. | In use (dev): tile.openstreetmap.org, configurable (D-015) |
 | **Street View Image Metadata endpoint** | Server-side check that a panorama exists near a coordinate. | Documented as **not charged / no quota**. Used only to validate locations (D-004). | Candidate |
 
 **Billable Google products we must NOT use by accident:** Street View Static API image

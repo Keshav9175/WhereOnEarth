@@ -277,3 +277,108 @@ again: our script inserts only if the collection is empty. → `scripts/seed-loc
 ### `async`/`.catch`/`.finally` in scripts
 `.catch` handles failure (prints the error and sets exit code 1), and `.finally` always runs (disconnects,
 so the script can exit).
+
+---
+
+## Phase 5 — Game API
+
+### Layers: route → service → model
+- **Route** (`src/app/api/.../route.ts`) speaks HTTP: reads the request, checks input, picks the status code.
+- **Service** (`src/server/services/`) holds the game workflow and rules (create game, score a guess).
+- **Model** (`src/server/models/`) holds the data rules and talks to MongoDB.
+Each layer has one job, so it is easier to read, test and reuse (multiplayer can call the same services).
+
+### The server is the referee (anti-cheat)
+The client sends only `{lat, lng}`. The server keeps the answers, computes distance and score with
+`distance.ts`/`scoring.ts`, and `toPublicGame()` hides answers until a round is guessed.
+
+### Validation with Zod (`safeParse`, `strictObject`)
+Every input from outside is `unknown` until checked. `guessSchema.safeParse(body)` returns clean data or
+a list of problems (→ 400). `strictObject` rejects unknown fields like `score`. → `src/lib/validation/guess.ts`
+
+### HTTP status codes used
+200 OK · 201 Created · 400 Bad Request (your input is wrong) · 401 Unauthorized (sign in first) ·
+403 Forbidden · 404 Not Found · 405 Method Not Allowed · 409 Conflict (clashes with the current state) ·
+500 Internal Server Error (our fault) · 503 Service Unavailable.
+
+### Dynamic routes (`[id]`, `[...all]`)
+A folder in brackets matches any value in that URL position: `games/[id]` → `/api/games/abc123`.
+`[...all]` matches any number of segments (used for `/api/auth/*`). Values arrive in `ctx.params`.
+
+### Race conditions and atomic updates
+Two requests at once (a double-click) can both read "not guessed yet" and both score. The fix is one
+**atomic, conditional** update: "save only if the round is still unguessed" (`findOneAndUpdate` with a
+filter). MongoDB lets only one win. `$inc` adds to a number safely inside the database.
+
+### `null` vs `$type: "null"` in MongoDB queries
+`{ field: null }` also matches *missing* fields. `{ field: { $type: "null" } }` matches only a literal null.
+
+---
+
+## Phase 6 — Accounts, ownership, leaderboard
+
+### Authentication vs authorization
+- **Authentication:** *who are you?* (sign-in with email + password → a session).
+- **Authorization:** *what may you do?* (only the owner may view or guess on their game).
+
+### Sessions and cookies
+After sign-in, the server stores a **session** in MongoDB and sends the browser a **cookie** (a small
+secret token). The browser sends that cookie automatically with every request, and `getCurrentUser(request)`
+asks Better Auth "whose session is this?". Signing out deletes the session. → `src/server/session.ts`
+
+### Password hashing
+Passwords are never stored as text. Better Auth stores a **hash** (a one-way scramble). At sign-in it hashes
+what you typed and compares. Even we can't read users' passwords.
+
+### CSRF and the `Origin` header
+A malicious site could try to make your browser send requests to our API using your cookie. Better Auth
+checks the `Origin` header (which website sent this?) and rejects foreign or missing origins on cookie
+requests (403 `INVALID_ORIGIN`). Browsers add `Origin` automatically; curl/PowerShell must add it by hand.
+
+### 404 instead of 403 for other people's games
+Answering "not found" hides whether a game exists at all, which reveals less to an attacker.
+
+### Aggregation pipelines
+A list of steps MongoDB runs on a collection: `$match` (filter) → `$sort` → `$group` (combine rows,
+e.g. best score per player) → `$limit` → `$lookup` (join another collection, e.g. user names).
+→ `src/server/services/leaderboardService.ts`
+
+### Indexes
+Like a book's index: lets MongoDB find "this player's games" or "top scores" without scanning every game.
+Declared in the model with `gameSchema.index(...)`.
+
+### Query strings and `z.coerce`
+`?limit=10` arrives as the *text* "10". `z.coerce.number()` converts it, then checks the range.
+→ `src/lib/validation/list.ts`
+
+---
+
+## Styling with Tailwind CSS (D-016)
+
+### Utility classes
+Instead of writing CSS rules in a separate file, you combine small ready-made classes in `className`:
+`className="flex flex-col gap-4 p-4 rounded-xl bg-card"` = flexbox, vertical, 1rem gaps, 1rem padding,
+rounded corners, card background. Tailwind generates CSS only for the classes you actually use.
+
+### Common classes
+| Class | Meaning |
+|---|---|
+| `flex`, `flex-col`, `grid`, `grid-cols-1` | layout (flexbox / grid) |
+| `gap-4`, `p-4`, `px-5`, `py-2.5`, `m-0` | spacing (1 unit = 0.25rem = 4px) |
+| `text-lg`, `text-2xl`, `font-bold` | text size / weight |
+| `rounded-xl`, `border`, `border-border` | corners and borders |
+| `w-full`, `h-80`, `min-h-80`, `max-w-7xl` | sizes |
+| `bg-primary`, `text-muted`, `text-error` | **our** theme colours (defined in `globals.css`) |
+
+### Variants (prefixes)
+`hover:` (mouse over), `focus-visible:` (keyboard focus), `disabled:` (disabled button),
+`lg:` (screens ≥ 1024px wide), `sm:` (≥ 640px). Example: `grid-cols-1 lg:grid-cols-[2fr_1fr]` = one column
+on phones, two columns (2:1) on large screens. `[...]` = an "arbitrary value" for one-off sizes.
+
+### Theme colours with dark mode
+`globals.css` defines CSS variables (`--primary`, …) with different values in dark mode, and `@theme inline`
+tells Tailwind about them, so `bg-primary` automatically follows light/dark mode.
+
+### Preflight (reset)
+Tailwind resets browser defaults: headings and lists lose their default size and bullets. So we add them
+back explicitly (e.g. `text-2xl font-bold` on `<h2>`, `list-decimal pl-6` on `<ol>`).

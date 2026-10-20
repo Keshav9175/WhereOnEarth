@@ -59,3 +59,16 @@ Exact folder and scripts are confirmed in Phase 2.
 - **Docs stay current.** At the end of each phase Claude updates `ROADMAP.md`,
   `PROGRESS.md` and `LEARNING_GUIDE.md`. Check that they match reality.
 - **Never paste real secrets into chat** unless necessary. Prefer placing them directly in `.env.local` yourself.
+
+## 8. Google Maps Embed API key (Street View)
+1. Google Cloud Console → create or select a project (e.g. "WhereOnEarth").
+2. Link a billing account (required by Google Maps Platform; the Embed API itself is no-charge).
+3. APIs & Services → Library → **Maps Embed API** → Enable.
+4. APIs & Services → Credentials → Create credentials → **API key**.
+5. Edit the key:
+   - **Application restrictions:** Websites → add `http://localhost:3000/*` (add the production
+     domain later in Phase 10).
+   - **API restrictions:** Restrict key → only **Maps Embed API**.
+6. Put it in `.env.local` as `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY=...` and restart `npm run dev`.
+The key is visible in the browser by design (it's in the iframe URL). The restrictions are what protect it.
+Never enable billable APIs (Street View Static, Maps JavaScript, Map Tiles) on this key.

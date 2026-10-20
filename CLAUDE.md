@@ -67,11 +67,13 @@ Use this structure for every step that produces code or configuration:
 Explain the *reasoning* behind architecture choices and trade-offs, using examples from this
 game. Keep steps small.
 
-**The owner writes the code, not Claude.** Never create or edit application code/config
-files and never run install, build or Git commands yourself. Give the complete code in chat with
-the exact file path, plus the exact commands, then wait for the owner to paste/run them and
-report the output. Give one small file at a time. Claude may read files and run read-only checks
-(e.g. `git status`, viewing files) to help debug, and keeps `docs/` and this file up to date.
+**Who writes the code (updated 2026-10-20, latest).** The owner writes the code again — **especially
+frontend**. Claude gives each file in chat (exact path, complete code, line-by-line teaching), one small
+file at a time, then waits for the owner's result before the next. Claude does not create or edit app code
+unless the owner explicitly asks for that specific change; read-only checks (tsc, tests, viewing files) and
+`docs/` updates are fine. (History: Phases 1–5 owner-written; Phase 6 backend, Street View and the
+Leaflet map were built by Claude at the owner's request.) Always explain "what we are doing now and
+why" first, use `/` in paths, verify files are saved and in the right folder, and never commit or push unless asked.
 
 **Make technical decisions yourself.** The owner is a beginner and has asked not to be given
 technical choices to pick from (folder names, libraries, structure). Choose the
@@ -101,7 +103,7 @@ credentials, money/billing, personal preferences, or destructive actions.
 - TypeScript everywhere in the application (strict mode). Avoid `any`; if unavoidable,
   explain why.
 - Descriptive file names. React components: `PascalCase.tsx`. Other modules: `camelCase.ts`.
-- Plain CSS (CSS Modules per component + one global stylesheet) unless a change is approved.
+- Styling: **Tailwind CSS v4** utility classes (D-016). Use the theme colours from `globals.css` (`bg-primary`, `text-muted`, `bg-card`, `border-border`, `text-error`…); keep repeated class lists in named constants. No CSS Module files.
 - Prefer small, reusable components and hooks. Comments explain *why*, not *what*.
 - Match the style of the surrounding code.
 

@@ -36,7 +36,35 @@ WhereOnEarth/
 - `scripts/locations-data.ts` + `scripts/seed-locations.ts` (`npm run seed`, via `tsx`).
 - Atlas: 20 locations seeded; `games` is empty.
 
-No game API endpoints exist yet (Phase 5).
+**Implemented as of Phases 5–6 (the backend is complete):**
+```
+src/
+├── app/api/
+│   ├── health/route.ts            GET  server + database status
+│   ├── auth/[...all]/route.ts     *    Better Auth: sign-up, sign-in, sign-out, get-session
+│   ├── games/route.ts             POST start a game (owned by the signed-in player, or a guest)
+│   ├── games/[id]/route.ts        GET  view a game (safe view, owner-only)
+│   ├── games/[id]/guess/route.ts  POST submit a guess (Zod-validated, server-scored)
+│   ├── me/route.ts                GET  profile + stats (sign-in required)
+│   ├── me/games/route.ts          GET  game history (sign-in required)
+│   └── leaderboard/route.ts       GET  top players (public)
+├── lib/
+│   ├── game/distance.ts, scoring.ts        pure rules (+ tests)
+│   └── validation/guess.ts, list.ts        Zod input rules (+ tests)
+├── server/
+│   ├── db.ts                      Mongoose connection (cached)
+│   ├── auth.ts                    Better Auth config (MongoDB adapter, email + password)
+│   ├── session.ts                 getCurrentUser(request)
+│   ├── models/Location.ts, Game.ts
+│   └── services/
+│       ├── gameService.ts         createGame, getGameForPlayer, submitGuess, canAccessGame
+│       ├── publicGame.ts          toPublicGame: what a player may see (+ tests)
+│       ├── playerService.ts       history + stats
+│       └── leaderboardService.ts  best game per player, names only
+└── types/geo.ts
+```
+**Request flow:** route (HTTP, validation, status codes) → service (game rules, ownership) →
+model (database). Pure logic in `lib/` is shared and unit-tested.
 
 ## Planned architecture — big picture
 
@@ -97,18 +125,25 @@ implementation serves both and cannot drift.
 - Owns the truth: the correct location for a round is stored server-side and revealed only
   after the guess is accepted.
 
-### API boundaries (initial sketch, finalized in Phase 5)
+### API reference (implemented)
 
-| Method & path | Purpose | Phase |
-|---|---|---|
-| `GET /api/health` | Confirms the server is running. Our first route. | 2 |
-| `POST /api/games` | Start a game, returning the game id and current round's panorama info (not the answer). | 5 |
-| `GET /api/games/{id}` | Game state and summary. Answers appear only for completed rounds. | 5 |
-| `POST /api/games/{id}/guess` | Submit `{lat, lng}` for the current round, returning the true location, distance and score. | 5 |
-| `GET /api/games` | Game history. | 5 |
-| `/api/users/...`, `/api/leaderboard`, auth routes | Accounts and rankings. | 6 |
+| Method & path | Auth | Body / query | Success | Errors |
+|---|---|---|---|---|
+| `GET /api/health` | — | — | 200 `{status, database, timestamp}` | 503 database down |
+| `POST /api/auth/sign-up/email` | — | `{name, email, password}` (password ≥ 8) | 200 user + session cookie | 400/422 |
+| `POST /api/auth/sign-in/email` | — | `{email, password}` | 200 user + session cookie | 401 wrong credentials |
+| `POST /api/auth/sign-out` | cookie + `Origin` | `{}` | 200 `{success:true}` | 403 missing/foreign Origin |
+| `GET /api/auth/get-session` | cookie | — | 200 session or `null` | — |
+| `POST /api/games` | optional | — | 201 `{id, status, totalRounds, currentRound, owner}` | 500 |
+| `GET /api/games/{id}` | owner, or anyone for guest games | — | 200 `PublicGame` | 404 |
+| `POST /api/games/{id}/guess` | same as above | `{lat, lng}` (strict) | 200 `{round, game}` | 400 invalid, 404, 409 finished/already guessed |
+| `GET /api/me` | required | — | 200 `{user, stats}` | 401 |
+| `GET /api/me/games` | required | `?limit=1..50` (default 10) | 200 `{games: GameSummary[]}` | 400, 401 |
+| `GET /api/leaderboard` | — | `?limit=1..50` (default 10) | 200 `{entries: LeaderboardEntry[]}` | 400 |
 
-Until the frontend exists (Phase 7), we test these with an HTTP client.
+Types the frontend will use: `PublicGame`/`PublicRound` (`src/server/services/publicGame.ts`),
+`GameSummary`/`PlayerStats` (`playerService.ts`), `LeaderboardEntry` (`leaderboardService.ts`).
+Errors are always `{ error: string, details? }` (Better Auth's own routes use `{ message, code }`).
 
 *Known limitation:* the panorama iframe URL contains the location or panorama id, so a
 determined player can inspect it. Server validation prevents score tampering, but not
