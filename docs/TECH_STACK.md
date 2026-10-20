@@ -35,9 +35,9 @@ Status: **Planned** = agreed, not installed · **In use** = installed and workin
 
 | Technology | What it does | Why | Phase | Status |
 |---|---|---|---|---|
-| **MongoDB** | Document database that stores JSON-like records (games, rounds, users). | Flexible shape that fits game data naturally. | 4 | Planned |
-| **Mongoose** | Defines schemas/models in code and validates data before saving. | Adds structure on top of a schemaless database. | 4 | Planned |
-| **MongoDB Atlas** | Hosted MongoDB in the cloud. | Has a free tier. Its current limits are re-checked in Phase 4. | 4 | Planned |
+| **MongoDB** | Document database that stores JSON-like records (games, rounds, users). | Flexible shape that fits game data naturally. | 4 | In use |
+| **Mongoose** 9.11.2 | Defines schemas/models in code and validates data before saving. | Adds structure on top of a schemaless database. | 4 | In use |
+| **MongoDB Atlas** (free cluster, Mumbai) | Hosted MongoDB in the cloud. | Has a free tier. Its current limits are re-checked in Phase 4. | 4 | In use |
 
 ## Accounts
 

@@ -28,7 +28,15 @@ WhereOnEarth/
 - `vitest.config.mts`: test config (`npm test`, 12 tests).
 - `.vscode/settings.json`: turns off compact folders in the VS Code sidebar.
 
-No database, models, game API or environment variables exist yet.
+**Implemented as of Phase 4:**
+- `.env.local` (secret, git-ignored) / `.env.example`: `MONGODB_URI`.
+- `src/server/db.ts`: `connectToDatabase()`, which caches the connection on `globalThis`.
+- `src/server/models/Location.ts`: `LocationModel` (`lat`, `lng`, `country`, timestamps) → `locations`.
+- `src/server/models/Game.ts`: `GameModel` (`status`, 5 embedded `rounds`, `totalScore`) → `games`.
+- `scripts/locations-data.ts` + `scripts/seed-locations.ts` (`npm run seed`, via `tsx`).
+- Atlas: 20 locations seeded; `games` is empty.
+
+No game API endpoints exist yet (Phase 5).
 
 ## Planned architecture — big picture
 

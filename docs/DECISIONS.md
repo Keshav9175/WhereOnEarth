@@ -86,6 +86,26 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
   decay scaled to map size (useful later for country-only maps, so revisit then).
 - **Status:** Accepted (2026-10-19).
 
+## D-009 — Game data model: embedded rounds with an answer snapshot
+- **Decision:** a `Game` document embeds exactly 5 `rounds`. Each round stores `locationId`
+  (ref) **plus a copy** of the answer (`answer {lat,lng}`, `country`). `guess`/`distanceKm`/
+  `score`/`guessedAt` stay `null` until the player guesses. `status` is an enum (`in_progress`/`completed`).
+- **Reasons:** rounds never exist without their game and are always read together, so embedding
+  means one read and one write. The snapshot keeps history correct even if a location is later edited.
+  The answer lives only on the server (anti-cheat, D-005).
+- **Alternatives:** a separate `rounds` collection (more queries, no benefit); storing only
+  `locationId` (history breaks if the location changes).
+- **Status:** Accepted (2026-10-20). A `userId` will be added in Phase 6.
+
+## D-010 — Seeding via a local `tsx` script, idempotent
+- **Decision:** `npm run seed` = `tsx --env-file=.env.local scripts/seed-locations.ts`. It inserts
+  `scripts/locations-data.ts` only if `locations` is empty.
+- **Reasons:** seeding is an admin task, and a script cannot be triggered from the internet (an API route could).
+  `tsx` runs TypeScript and resolves `@/` paths. Node's built-in `--env-file` loads secrets. The empty-check
+  makes re-runs safe.
+- **Alternatives:** Node's native type stripping (cannot resolve `@/` aliases); an admin API route (security risk).
+- **Status:** Accepted (2026-10-20).
+
 ## D-006 — Backend-first build order
 - **Context:** the owner wants to build the backend (models, API) before the frontend.
 - **Decision:** reorder the roadmap: logic → database/models → game API → auth → frontend →

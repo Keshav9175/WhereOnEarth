@@ -1,21 +1,35 @@
 # Progress
 
-_Last updated: 2026-10-19_
+_Last updated: 2026-10-20_
 
 ## Current phase
-**Phase 4 in progress.** Steps 1–3 done (2026-10-20): Atlas project "WhereOnEarth", free cluster `whereonearth`
-(Mumbai), user `keshavdivate86_db_user`, `.env.local` (standard non-SRV URI), `.env.example`,
-mongoose 9.11.2, `src/server/db.ts`, and `/api/health` reports `database: connected`. Next: Step 4, models.
+**Phase 4 is complete.** Waiting for `NEXT` → **Phase 5: Game API** (start game, guess, results,
+validation, server-side scoring).
+
 **Security TODO (Phase 10):** the DB password appeared in a chat screenshot, so rotate it before going public.
 
 **Working style (from `CLAUDE.md` §4):** the owner writes every code file by pasting from chat,
 one small file at a time, and runs all commands. Claude explains "what we're doing now" first,
-uses `/` in paths, checks file locations and saves on disk, and updates `docs/`.
+uses `/` in paths, and checks file locations and saves on disk (the owner has twice left a file unsaved/empty),
+and updates `docs/`. When the owner explicitly asks Claude to make a specific change, Claude does it.
 
-**Not yet committed:** everything since commit `759bc48` (Phases 2–3) is uncommitted. The owner
-chose to push later. Recommend a local commit before Phase 4.
+**Git:** local commit `41439dd` includes the app, tests, `db.ts` and both models. Uncommitted:
+`scripts/`, the `package.json` (tsx + seed script), and docs. Nothing has been pushed since `759bc48`. The owner pushes later.
 
 ## Completed
+
+### Phase 4 ✅ (2026-10-20)
+- Atlas: project "WhereOnEarth", free cluster `whereonearth` (AWS Mumbai, M0 limits verified:
+  512 MB, 100 ops/s, 500 connections, pauses after 30 days idle). DB user `keshavdivate86_db_user`.
+- IP access list: `103.167.184.90` **and** `14.96.211.202` (the office network uses both).
+- `.env.local`: **standard** `mongodb://` URI (the `+srv` form fails locally, see Known issues), with
+  database `whereonearth`. `.env.example` with placeholders.
+- mongoose 9.11.2 (dependency), tsx 4.23 (dev). `src/server/db.ts`, and `/api/health` reports database status.
+- Models: `src/server/models/Location.ts`, `src/server/models/Game.ts` (D-009).
+- `scripts/locations-data.ts` (20 locations, 6 continents), `scripts/seed-locations.ts`,
+  `npm run seed` (D-010). Seeded 20, and a re-run was skipped. Claude wrote `seed-locations.ts` and
+  the `package.json` script at the owner's request.
+- Errors fixed along the way: db name typo (`/clear`), SRV DNS refusal, password `0`/`O`, second office IP.
 
 ### Phase 3 ✅ (2026-10-19)
 Written by the owner from chat:

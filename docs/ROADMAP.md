@@ -13,7 +13,7 @@ before any game UI exists.
 | 1 | Dev environment, Git, foundational setup | 0 | **Complete** |
 | 2 | Next.js project + backend skeleton (first API route) | 1 | **Complete** |
 | 3 | Game logic: distance & scoring (pure functions + unit tests) | 2 | **Complete** |
-| 4 | MongoDB, Mongoose, data models | 2 | Not started |
+| 4 | MongoDB, Mongoose, data models | 2 | **Complete** |
 | 5 | Game API: routes, validation, server-side scoring, history | 3, 4 | Not started |
 | 6 | Authentication, users, leaderboards (API) | 5 | Not started |
 | 7 | Frontend fundamentals: game UI calling our API | 5 (6 for accounts UI) | Not started |
@@ -64,13 +64,15 @@ testing it with an HTTP client, and how a request reaches a route handler.
 - [ ] Self-check: the owner can explain what makes a function "pure" and why it matters for anti-cheat.
 - `RoundResult` type deferred to Phase 5, where rounds are actually modeled.
 
-## Phase 4 — MongoDB, Mongoose, data models
+## Phase 4 — MongoDB, Mongoose, data models ✅
 **Goal:** a database and the models the game needs.
-**Includes:** Atlas account and free cluster (verify current limits), `.env.local` +
-`.env.example`, a reusable connection module, Mongoose models `Location` and `Game` (rounds
-embedded), a seed script with a small hand-picked location list.
-**Acceptance:** the app connects, seed data is visible in Atlas, the DB URI appears nowhere in Git, and the
-owner can explain schema vs model vs document.
+- [x] Atlas project "WhereOnEarth", free cluster `whereonearth` (AWS Mumbai), limits verified.
+- [x] `.env.local` (git-ignored, standard non-SRV URI) + `.env.example`.
+- [x] `src/server/db.ts` (cached connection); `/api/health` reports database status.
+- [x] Models `Location` and `Game` (rounds embedded, answer snapshot) (D-009).
+- [x] `npm run seed` inserted 20 locations; a second run is skipped (idempotent) (D-010).
+- [x] DB URI appears nowhere in Git.
+- [ ] Self-check: the owner can explain schema vs model vs document.
 
 ## Phase 5 — Game API
 **Goal:** a complete single-player game playable through HTTP requests alone.

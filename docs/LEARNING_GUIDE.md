@@ -222,3 +222,58 @@ code for each item. Tests use them to check many values at once.
 `distance.ts` only measures, and `scoring.ts` only converts km to points. Neither knows about the
 other. The API (Phase 5) will connect them: distance first, then score. Small single-purpose
 pieces are easier to understand, test and change.
+
+---
+
+## Phase 4 — Database (MongoDB + Mongoose)
+
+### Database, collection, document
+A **database** stores data permanently. MongoDB groups records into **collections**
+(`locations`, `games`). Each record is a **document**, a JSON-like object with a unique `_id`.
+
+### Schema, model, document (Mongoose)
+- **Schema:** the rules (fields, types, required, min/max, enum).
+- **Model:** the tool built from a schema to save and find data (`LocationModel.find()`).
+- **Document:** one saved record.
+→ `src/server/models/Location.ts`, `src/server/models/Game.ts`
+
+### Validation in the model
+Mongoose checks every document against the schema **before** saving (e.g. `lat` must be
+from −90 to 90, a game must have exactly 5 rounds). It is the last safety net in front of the database.
+
+### Embedding
+Putting related data inside one document (rounds inside a game) when the parts always belong to
+one parent and are read together. → `docs/DECISIONS.md` D-009
+
+### Environment variables and `.env.local`
+Secrets live in `.env.local` (git-ignored) and are read in code as `process.env.MONGODB_URI`.
+Next.js loads the file **only at startup**, so restart `npm run dev` after editing it. Scripts load it
+with `--env-file=.env.local`.
+
+### Connection string
+`mongodb://user:password@host1,host2,host3/whereonearth?ssl=true&...` = who signs in, which
+servers (a 3-server **replica set**), which database, and options. `ssl=true` encrypts traffic.
+
+### Connection caching
+Opening a DB connection is slow, so `connectToDatabase()` connects once and reuses it. It stores the
+connection on `globalThis` so development reloads don't open new connections. → `src/server/db.ts`
+
+### Atlas security: IP access list + database user
+Atlas lets a connection in only if (1) the computer's public IP is on the access list **and**
+(2) the username and password are correct. Never allow `0.0.0.0/0` (everyone).
+
+### Debugging by layer (lessons from this phase)
+| Error | Layer | Real cause here |
+|---|---|---|
+| `querySrv ECONNREFUSED` | DNS | Local DNS refused `+srv` lookups. Fixed with the standard URI. |
+| `bad auth : authentication failed` | Login | Password typo (`0` vs `O`) |
+| `SSL alert number 80` / `MongoNetworkError` | Network access | The office uses 2 public IPs, and one was not allowlisted |
+Read the error, find the layer, and fix only that layer.
+
+### Seeding and idempotency
+**Seeding** fills a database with starting data via a script. **Idempotent** means it is safe to run
+again: our script inserts only if the collection is empty. → `scripts/seed-locations.ts`
+
+### `async`/`.catch`/`.finally` in scripts
+`.catch` handles failure (prints the error and sets exit code 1), and `.finally` always runs (disconnects,
+so the script can exit).
