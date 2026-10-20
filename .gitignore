@@ -3,6 +3,12 @@
 .env.*
 !.env.example
 
+# --- Private keys / certificates ---
+*.pem
+
+# --- Hosting platform local config ---
+.vercel/
+
 # --- Dependencies (re-created by `npm install`) ---
 node_modules/
 

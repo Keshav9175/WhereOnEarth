@@ -109,3 +109,116 @@ because rewriting shared history breaks other copies. After pushing, fix things 
 ### Line endings (LF vs CRLF warnings)
 Windows ends text lines with CRLF, while Linux and macOS use LF. Git converts automatically, and the
 warning is informational.
+
+---
+
+## Phase 2 — Next.js project and first API route
+
+### `package.json` and `node_modules/`
+`package.json` lists the packages the project needs (`dependencies` for running the app,
+`devDependencies` for tools like TypeScript and ESLint) and **scripts** (`npm run dev`).
+`npm install` downloads them into `node_modules/`, which is never committed because anyone can
+re-create it. `package-lock.json` records the exact versions installed, so it *is* committed.
+
+### npm scripts
+- `npm run dev`: development server with live reload at http://localhost:3000.
+- `npm run build`: production build. It also type-checks, so it catches errors.
+- `npm run start`: runs the production build.
+- `npm run lint`: ESLint checks code for common mistakes.
+
+### App Router: folders become URLs
+Inside `src/app/`, the folder path becomes the URL path:
+- `src/app/page.tsx` → the page at `/`
+- `src/app/api/health/route.ts` → the API endpoint at `/api/health`
+A `page.tsx` returns UI (HTML). A `route.ts` returns data (usually JSON).
+
+### HTTP request and response
+A **request** has a *method* (`GET` = read something, `POST` = create/submit something) and a
+URL. A **response** has a *status code* (`200` OK, `400` bad input, `404` not found,
+`405` method not allowed, `500` server error), *headers* (e.g. `content-type: application/json`),
+and a *body* (the JSON). → `src/app/api/health/route.ts`
+
+### Route handler
+An exported function named after the HTTP method (`export async function GET()`). Next.js
+calls it when a matching request arrives and sends back the `Response` it returns. Methods
+you do not export are rejected automatically with `405`.
+
+### JSON
+A text format for data: `{"status":"ok"}`. `Response.json(obj)` converts a JavaScript object
+to JSON and sets the `content-type` header.
+
+### `async` / `await`
+`async` marks a function that may wait for something slow (network, database).
+`await` pauses that function until the slow thing finishes, without freezing the server.
+
+### Prerendering vs per-request (Cache Components)
+Next.js 16 tries to compute responses once at build time when they cannot change. Our health check
+must be live, so `await connection()` says "wait for a real request". In the build output,
+`○` means static and `ƒ` means dynamic (per request).
+
+### Health check endpoint
+A tiny endpoint that proves the server is running. Hosting platforms and monitors call it
+automatically. It is the "hello world" of backends.
+
+---
+
+## Phase 3 — Game logic and testing
+
+### Pure function
+A function whose output depends **only** on its inputs and which changes nothing outside
+itself (no database, no network, no clock, no randomness). `haversineDistanceKm(a, b)` always
+gives the same answer for the same `a` and `b`. Why it matters here:
+- **Easy to test:** call it and compare the result. No setup is needed.
+- **Anti-cheat:** the server can re-run the exact same rule the browser uses, so a faked score is
+  caught. → `src/lib/game/distance.ts`
+
+### Type (`type Coordinates = { lat: number; lng: number }`)
+Describes the *shape* of data. TypeScript then refuses code that passes `{ latitude: ... }`
+or a string where a number is expected. It catches typos before the code runs. → `src/types/geo.ts`
+
+### Haversine formula / great-circle distance
+The Earth is (nearly) a sphere, so the shortest route between two points curves over its
+surface. Haversine computes that distance from latitudes and longitudes. Flat-map math would be
+badly wrong for long distances and near the poles.
+
+### Degrees vs radians
+Coordinates are in degrees (0–360 for a full turn), but JavaScript's `Math.sin`/`Math.cos`
+expect radians (0–2π). Forgetting to convert is a classic bug, and the tests would catch it.
+
+### Floating-point numbers
+Computers store decimals approximately (`0.1 + 0.2` is `0.30000000000000004`). That is why tests
+use `toBeCloseTo` instead of exact equality, and why the code clamps a value that can drift slightly
+above 1.
+
+### Unit test (Vitest)
+Code that checks other code automatically. `describe` groups tests, `it("...")` is one test case,
+and `expect(actual).toBe(expected)` is an assertion. `npm test` runs them all. A good test suite
+covers normal cases, **edge cases** (same point, the 180° line, opposite sides of the Earth), and
+properties that must always hold (symmetry, maximum distance). → `src/lib/game/distance.test.ts`
+
+### Dev dependency (`npm install -D`)
+A package needed only while developing (tests, type checking, linting), not when the app runs
+for players. These are listed under `devDependencies` in `package.json`.
+
+### Constants (`export const MAX_SCORE = 5000`)
+A named value that never changes. Naming it (instead of writing `5000` in many places)
+explains what the number means and lets you rebalance the game by changing one line.
+→ `src/lib/game/scoring.ts`
+
+### Exponential decay (`Math.exp(-x)`)
+Starts at 1 and slides smoothly toward 0 without ever going below it. Used for scoring: points
+drop fast for the first few hundred km, then flatten out. → `docs/DECISIONS.md` D-008
+
+### Throwing errors (`throw new RangeError(...)`)
+Stops the function immediately with a clear message when the input is impossible. This is better than
+quietly returning a wrong value like `NaN`, which would cause a confusing bug somewhere else.
+Tests check it with `expect(() => fn(bad)).toThrow(...)`. The `() =>` lets Vitest call it.
+
+### `.map` and loops
+`list.map(fn)` runs `fn` on every item and returns a new list. `for (const x of list)` repeats
+code for each item. Tests use them to check many values at once.
+
+### Separation of responsibilities
+`distance.ts` only measures, and `scoring.ts` only converts km to points. Neither knows about the
+other. The API (Phase 5) will connect them: distance first, then score. Small single-purpose
+pieces are easier to understand, test and change.

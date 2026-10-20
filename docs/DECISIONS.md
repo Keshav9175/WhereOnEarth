@@ -62,6 +62,30 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
 - **Trade-offs:** none significant now that the backend is built first. The server owns scoring from the start.
 - **Status:** Accepted.
 
+## D-007 — Vitest for unit tests; tests live next to the code
+- **Decision:** use Vitest (`npm test` runs once, `npm run test:watch` re-runs on save).
+  Test files sit beside the file they test (`distance.ts` + `distance.test.ts`).
+- **Reasons:** Vitest is recommended in the bundled Next.js docs, understands TypeScript with no
+  build step, and is fast. Keeping tests next to the code makes missing tests obvious.
+- **Alternatives:** Jest (older and very common, but needs extra TypeScript setup); a separate
+  `tests/` folder (also common, but it hides which files lack tests).
+- **Details:** installed only `vitest` for now. React testing packages wait until Phase 7.
+  We use Vite's built-in `resolve.tsconfigPaths` instead of the `vite-tsconfig-paths` plugin
+  the docs mention, because Vite now supports it natively, which means one dependency fewer.
+  `@types/node` was raised from ^20 to ^24 to match the installed Node 24 (Vitest 5 requires ≥22).
+- **Status:** Accepted (2026-10-19).
+
+## D-008 — Scoring formula: exponential decay, max 5000
+- **Decision:** `score = round(5000 × e^(−distanceKm / 2000))`, with full 5000 within 50 m.
+  Constants `MAX_SCORE`, `SCORE_DECAY_KM`, `PERFECT_GUESS_KM` live in `src/lib/game/scoring.ts`.
+  Invalid input (negative, NaN, Infinity) throws `RangeError`.
+- **Reasons:** 5000 per round is the genre standard. Exponential decay rewards close guesses
+  strongly, never goes negative, and is smooth (farther is never better). The named constants make
+  balancing a one-line change.
+- **Alternatives:** a linear drop (every km is worth the same, which feels wrong at both ends); a
+  decay scaled to map size (useful later for country-only maps, so revisit then).
+- **Status:** Accepted (2026-10-19).
+
 ## D-006 — Backend-first build order
 - **Context:** the owner wants to build the backend (models, API) before the frontend.
 - **Decision:** reorder the roadmap: logic → database/models → game API → auth → frontend →

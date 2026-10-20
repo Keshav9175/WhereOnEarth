@@ -11,8 +11,8 @@ before any game UI exists.
 |---|---|---|---|
 | 0 | Project inspection, workflow, documentation | — | **Complete** |
 | 1 | Dev environment, Git, foundational setup | 0 | **Complete** |
-| 2 | Next.js project + backend skeleton (first API route) | 1 | Not started |
-| 3 | Game logic: distance & scoring (pure functions + unit tests) | 2 | Not started |
+| 2 | Next.js project + backend skeleton (first API route) | 1 | **Complete** |
+| 3 | Game logic: distance & scoring (pure functions + unit tests) | 2 | **Complete** |
 | 4 | MongoDB, Mongoose, data models | 2 | Not started |
 | 5 | Game API: routes, validation, server-side scoring, history | 3, 4 | Not started |
 | 6 | Authentication, users, leaderboards (API) | 5 | Not started |
@@ -48,14 +48,21 @@ before any game UI exists.
 **Includes:** scaffold with the official tool (versions verified), App Router folder tour,
 the agreed folder structure (`docs/ARCHITECTURE.md`), `GET /api/health` returning JSON,
 testing it with an HTTP client, and how a request reaches a route handler.
-**Acceptance:** `npm run dev` runs, `/api/health` returns `{ "status": "ok" }`, the owner can explain
-request → route handler → response, and the work is committed.
+**Acceptance:**
+- [x] Next.js 16.4.2 scaffolded at the repo root (TypeScript, App Router, `src/`, ESLint, no Tailwind).
+- [x] `npm run lint`, `tsc --noEmit` and `npm run build` pass.
+- [x] `GET /api/health` returns `200` + `{ "status": "ok", "timestamp": ... }`, fresh per request. `POST` returns `405`.
+- [ ] The owner ran `npm run dev` and called the endpoint themselves.
+- [ ] The owner can explain request → route handler → response.
+- [ ] Committed and pushed.
 
-## Phase 3 — Game logic: distance & scoring
+## Phase 3 — Game logic: distance & scoring ✅
 **Goal:** the game's rules as pure, tested TypeScript functions.
-**Includes:** shared types (`Coordinates`, `RoundResult`), Haversine distance, score
-formula, a test runner (chosen and approved here), and unit tests including edge cases.
-**Acceptance:** all tests pass, and the owner can explain what makes a function "pure" and why it matters for anti-cheat.
+- [x] `Coordinates` type; `haversineDistanceKm()`; `calculateScore()` (D-008).
+- [x] Vitest set up (D-007), with 12 unit tests passing (distance 6, scoring 6), including edge cases.
+- [x] All code written by the owner from chat.
+- [ ] Self-check: the owner can explain what makes a function "pure" and why it matters for anti-cheat.
+- `RoundResult` type deferred to Phase 5, where rounds are actually modeled.
 
 ## Phase 4 — MongoDB, Mongoose, data models
 **Goal:** a database and the models the game needs.

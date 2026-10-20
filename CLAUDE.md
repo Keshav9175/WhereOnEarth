@@ -67,6 +67,12 @@ Use this structure for every step that produces code or configuration:
 Explain the *reasoning* behind architecture choices and trade-offs, using examples from this
 game. Keep steps small.
 
+**The owner writes the code, not Claude.** Never create or edit application code/config
+files and never run install, build or Git commands yourself. Give the complete code in chat with
+the exact file path, plus the exact commands, then wait for the owner to paste/run them and
+report the output. Give one small file at a time. Claude may read files and run read-only checks
+(e.g. `git status`, viewing files) to help debug, and keeps `docs/` and this file up to date.
+
 **Make technical decisions yourself.** The owner is a beginner and has asked not to be given
 technical choices to pick from (folder names, libraries, structure). Choose the
 industry-standard option, explain why in plain English, record it in `docs/DECISIONS.md`,
@@ -118,6 +124,9 @@ credentials, money/billing, personal preferences, or destructive actions.
 
 - Do not install a package without first explaining what it does, why we need it, and
   whether a built-in alternative exists. Wait for approval of new dependencies.
+- **Next.js 16 differs from older versions.** Follow `AGENTS.md`: read the docs bundled at
+  `node_modules/next/dist/docs/` before writing Next.js code. Cache Components is enabled,
+  so route handlers that must run per request call `await connection()` (or read request data).
 - Before relying on any library or external API, **verify current official documentation**
   (APIs, versions and pricing change). Never invent APIs, free tiers or capabilities. If
   something cannot be verified, say so explicitly.

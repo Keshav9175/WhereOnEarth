@@ -14,7 +14,21 @@ WhereOnEarth/
 └── .claude/           ← created automatically by Claude Code tooling; not part of the game
 ```
 
-No application code, dependencies, or environment variables exist yet. Git is set up (Phase 1).
+**Implemented as of Phase 2:** a Next.js 16.4.2 app at the repo root.
+- `src/app/layout.tsx`: the root HTML shell for all pages.
+- `src/app/page.tsx`: placeholder home page ("Hello world!").
+- `src/app/api/health/route.ts`: `GET /api/health`, returning `{ status, timestamp }`.
+- Config: `package.json`, `tsconfig.json`, `next.config.ts` (Cache Components on),
+  `eslint.config.mjs`, `AGENTS.md`.
+
+**Implemented as of Phase 3:**
+- `src/types/geo.ts`: the `Coordinates` type (`{ lat, lng }`).
+- `src/lib/game/distance.ts`: `haversineDistanceKm()` (pure), plus `distance.test.ts`.
+- `src/lib/game/scoring.ts`: `calculateScore()` (pure, D-008), plus `scoring.test.ts`.
+- `vitest.config.mts`: test config (`npm test`, 12 tests).
+- `.vscode/settings.json`: turns off compact folders in the VS Code sidebar.
+
+No database, models, game API or environment variables exist yet.
 
 ## Planned architecture — big picture
 
