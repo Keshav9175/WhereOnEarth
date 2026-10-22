@@ -36,6 +36,11 @@ type Round = {
 };
 
 // Pin colours, one per player (in join order).
+// Round pacing, like WorldGuessr: results stay up this long before the next round starts by itself,
+// and the last player still guessing gets at most this long once everyone else has guessed.
+export const RESULTS_SECONDS = 10;
+export const LAST_GUESSER_SECONDS = 20;
+
 export const PLAYER_COLORS = ["#2563eb", "#dc2626", "#d97706", "#7c3aed", "#db2777", "#0891b2", "#65a30d", "#ea580c"];
 
 export class PartyError extends Error {}
@@ -49,6 +54,8 @@ export class PartyRoom {
   private players = new Map<string, Player>();
   private locations: PartyLocation[] = [];
   private rounds: Round[] = [];
+  // When the results screen ends and the next round starts automatically (server clock, ms).
+  resultsUntil: number | null = null;
 
   constructor(code: string) {
     this.code = code;
@@ -164,7 +171,7 @@ export class PartyRoom {
   }
 
   // The SERVER works out distance and score from the true location (the browser only sends a point).
-  guess(playerId: string, point: Coordinates) {
+  guess(playerId: string, point: Coordinates, now: number) {
     const round = this.currentRound;
     if (this.phase !== "round" || !round) throw new PartyError("There's no round to guess in.");
     if (!this.players.has(playerId)) throw new PartyError("You're not in this party.");
@@ -172,6 +179,14 @@ export class PartyRoom {
 
     const distanceKm = haversineDistanceKm(point, round.location);
     round.guesses.set(playerId, { playerId, lat: point.lat, lng: point.lng, distanceKm, score: calculateScore(distanceKm) });
+
+    // Hurry up the last one (like WorldGuessr): when only ONE connected player still has to guess, they get
+    // at most LAST_GUESSER_SECONDS more — also in "no time limit" rounds, so nobody waits on an idle player.
+    const stillGuessing = [...this.players.values()].filter((player) => player.connected && !round.guesses.has(player.id));
+    const hurryUntil = now + LAST_GUESSER_SECONDS * 1000;
+    if (stillGuessing.length === 1 && this.players.size > 1 && (round.endsAt === null || round.endsAt > hurryUntil)) {
+      round.endsAt = hurryUntil;
+    }
   }
 
   // True when every connected player has guessed — the round can end early.
@@ -183,7 +198,8 @@ export class PartyRoom {
   }
 
   // Ends the round (everyone guessed, or time ran out): adds the scores and reveals the answer.
-  endRound() {
+  // The results stay on screen for RESULTS_SECONDS; then the server calls advance() by itself.
+  endRound(now: number) {
     const round = this.currentRound;
     if (this.phase !== "round" || !round) return;
     for (const guess of round.guesses.values()) {
@@ -191,18 +207,27 @@ export class PartyRoom {
       if (player) player.score += guess.score;
     }
     this.phase = "results";
+    this.resultsUntil = now + RESULTS_SECONDS * 1000;
   }
 
-  // Host: from the results to the next round, or to the final standings after the last round.
-  next(playerId: string, now: number) {
-    this.requireHost(playerId);
-    if (this.phase !== "results") throw new PartyError("Finish the round first.");
+  // From the results to the next round — or to the final standings after the last round.
+  advance(now: number) {
+    if (this.phase !== "results") return;
+    this.resultsUntil = null;
     if (this.rounds.length >= this.locations.length) this.phase = "final";
     else this.beginRound(now);
   }
 
+  // Host: skip the rest of the results countdown.
+  next(playerId: string, now: number) {
+    this.requireHost(playerId);
+    if (this.phase !== "results") throw new PartyError("Finish the round first.");
+    this.advance(now);
+  }
+
   backToLobby(playerId: string) {
     this.requireHost(playerId);
+    this.resultsUntil = null;
     this.phase = "lobby";
     this.rounds = [];
     this.locations = [];
@@ -245,6 +270,7 @@ export class PartyRoom {
       // The location is only sent while that round is being played (Street View needs it) — never the country.
       panorama: this.phase === "round" && round ? { lat: round.location.lat, lng: round.location.lng } : null,
       endsAt: this.phase === "round" && round ? round.endsAt : null,
+      nextAt: this.phase === "results" ? this.resultsUntil : null,
       // Only WHERE you guessed — not the distance or score, which would hint at the answer.
       yourGuess: (() => {
         const own = round && this.phase === "round" ? round.guesses.get(playerId) : undefined;

@@ -74,22 +74,25 @@ function clearRoundTimer(party: Party) {
   party.roundTimer = null;
 }
 
-// When a round starts, schedule its end (if it has a time limit).
-function scheduleRoundEnd(party: Party) {
+// ONE timer per party for whatever happens next on its own: the round ending (time's up — including the
+// shortened 20 s for the last player), or the next round starting after the 10 s results.
+// Call it after every change, so a new deadline replaces the old one.
+function schedule(party: Party) {
   clearRoundTimer(party);
-  const endsAt = party.room.currentRound?.endsAt;
-  if (party.room.phase !== "round" || !endsAt) return;
+  const { room } = party;
+  const at = room.phase === "round" ? room.currentRound?.endsAt : room.phase === "results" ? room.resultsUntil : null;
+  if (!at) return;
   party.roundTimer = setTimeout(() => {
-    party.room.endRound();
+    if (room.phase === "round") room.endRound(Date.now());
+    else if (room.phase === "results") room.advance(Date.now());
+    schedule(party);
     broadcast(party);
-  }, Math.max(0, endsAt - Date.now()));
+  }, Math.max(0, at - Date.now()));
 }
 
 function endRoundIfEveryoneGuessed(party: Party) {
-  if (party.room.everyoneGuessed()) {
-    clearRoundTimer(party);
-    party.room.endRound();
-  }
+  if (party.room.everyoneGuessed()) party.room.endRound(Date.now());
+  schedule(party);
 }
 
 function closeParty(code: string) {
@@ -227,16 +230,16 @@ async function handle(connection: Connection, message: ClientMessage) {
       } finally {
         party.busy = false;
       }
-      scheduleRoundEnd(party);
+      schedule(party);
       return broadcast(party);
     }
     case "guess":
-      party.room.guess(me, { lat: message.lat, lng: message.lng });
+      party.room.guess(me, { lat: message.lat, lng: message.lng }, Date.now());
       endRoundIfEveryoneGuessed(party);
       return broadcast(party);
     case "next":
       party.room.next(me, Date.now());
-      scheduleRoundEnd(party);
+      schedule(party);
       return broadcast(party);
     case "backToLobby":
       clearRoundTimer(party);

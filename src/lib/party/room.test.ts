@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_PARTY_PLAYERS } from "./protocol";
-import { PartyError, PartyRoom, type PartyLocation } from "./room";
+import { LAST_GUESSER_SECONDS, PartyError, PartyRoom, RESULTS_SECONDS, type PartyLocation } from "./room";
 
 const PARIS: PartyLocation = { lat: 48.8566, lng: 2.3522, country: "France" };
 const FIVE_ROUNDS: PartyLocation[] = Array.from({ length: 5 }, () => PARIS);
@@ -71,11 +71,57 @@ describe("PartyRoom: host-only actions", () => {
   });
 });
 
+describe("PartyRoom: pacing (like WorldGuessr)", () => {
+  it("gives the last player still guessing only 20 seconds", () => {
+    const room = roomWith("ana", "ben");
+    room.start("ana", FIVE_ROUNDS, 0); // 60 s round → ends at 60,000
+    room.guess("ana", { lat: 1, lng: 1 }, 5_000);
+    expect(room.viewFor("ben").endsAt).toBe(5_000 + LAST_GUESSER_SECONDS * 1000);
+  });
+
+  it("never lengthens a round that has less than 20 seconds left", () => {
+    const room = roomWith("ana", "ben");
+    room.start("ana", FIVE_ROUNDS, 0);
+    room.guess("ana", { lat: 1, lng: 1 }, 50_000); // only 10 s left
+    expect(room.viewFor("ben").endsAt).toBe(60_000);
+  });
+
+  it("only hurries when ONE player is left (3 players: after the first guess, nothing changes)", () => {
+    const room = roomWith("ana", "ben", "cai");
+    room.start("ana", FIVE_ROUNDS, 0);
+    room.guess("ana", { lat: 1, lng: 1 }, 5_000);
+    expect(room.viewFor("ana").endsAt).toBe(60_000);
+    room.guess("ben", { lat: 1, lng: 1 }, 6_000);
+    expect(room.viewFor("ana").endsAt).toBe(6_000 + LAST_GUESSER_SECONDS * 1000);
+  });
+
+  it("also hurries the last player in a 'no time limit' round", () => {
+    const room = roomWith("ana", "ben");
+    room.updateSettings("ana", { mapId: "world", mapName: "World", rounds: 5, roundSeconds: 0 });
+    room.start("ana", FIVE_ROUNDS, 0);
+    expect(room.viewFor("ben").endsAt).toBeNull();
+    room.guess("ana", { lat: 1, lng: 1 }, 5_000);
+    expect(room.viewFor("ben").endsAt).toBe(5_000 + LAST_GUESSER_SECONDS * 1000);
+  });
+
+  it("shows the results for 10 seconds, then moves on by itself", () => {
+    const room = roomWith("ana");
+    room.start("ana", FIVE_ROUNDS, 0);
+    room.guess("ana", { lat: 1, lng: 1 }, 1_000);
+    room.endRound(1_000);
+    expect(room.viewFor("ana").nextAt).toBe(1_000 + RESULTS_SECONDS * 1000);
+    room.advance(11_000);
+    expect(room.viewFor("ana").phase).toBe("round");
+    expect(room.viewFor("ana").roundNumber).toBe(2);
+    expect(room.viewFor("ana").nextAt).toBeNull();
+  });
+});
+
 describe("PartyRoom: playing", () => {
   it("hides the answer and other guesses until the round ends", () => {
     const room = roomWith("ana", "ben");
     room.start("ana", FIVE_ROUNDS, 0);
-    room.guess("ana", { lat: 48.86, lng: 2.35 });
+    room.guess("ana", { lat: 48.86, lng: 2.35 }, 0);
 
     const benSees = room.viewFor("ben");
     expect(benSees.phase).toBe("round");
@@ -88,12 +134,12 @@ describe("PartyRoom: playing", () => {
   it("scores on the server and ends the round when everyone has guessed", () => {
     const room = roomWith("ana", "ben");
     room.start("ana", FIVE_ROUNDS, 0);
-    room.guess("ana", { lat: PARIS.lat, lng: PARIS.lng });
+    room.guess("ana", { lat: PARIS.lat, lng: PARIS.lng }, 0);
     expect(room.everyoneGuessed()).toBe(false);
-    room.guess("ben", { lat: 0, lng: 0 });
+    room.guess("ben", { lat: 0, lng: 0 }, 0);
     expect(room.everyoneGuessed()).toBe(true);
 
-    room.endRound();
+    room.endRound(0);
     const view = room.viewFor("ben");
     expect(view.phase).toBe("results");
     expect(view.result?.country).toBe("France");
@@ -107,15 +153,15 @@ describe("PartyRoom: playing", () => {
     const room = roomWith("ana", "ben");
     room.start("ana", FIVE_ROUNDS, 0);
     room.setConnected("ben", false);
-    room.guess("ana", { lat: 1, lng: 1 });
+    room.guess("ana", { lat: 1, lng: 1 }, 0);
     expect(room.everyoneGuessed()).toBe(true);
   });
 
   it("refuses a second guess in the same round", () => {
     const room = roomWith("ana");
     room.start("ana", FIVE_ROUNDS, 0);
-    room.guess("ana", { lat: 1, lng: 1 });
-    expect(() => room.guess("ana", { lat: 2, lng: 2 })).toThrow("already guessed");
+    room.guess("ana", { lat: 1, lng: 1 }, 0);
+    expect(() => room.guess("ana", { lat: 2, lng: 2 }, 0)).toThrow("already guessed");
   });
 
   it("sets a deadline from the round time, or none for 'no limit'", () => {
@@ -136,8 +182,8 @@ describe("PartyRoom: playing", () => {
     room.start("ana", FIVE_ROUNDS, 0); // more locations than needed: only 3 are used
     expect(room.viewFor("ana").totalRounds).toBe(3);
     for (let round = 1; round <= 3; round++) {
-      room.guess("ana", { lat: 0, lng: 0 });
-      room.endRound();
+      room.guess("ana", { lat: 0, lng: 0 }, 0);
+      room.endRound(0);
       room.next("ana", round);
     }
     expect(room.viewFor("ana").phase).toBe("final");
@@ -155,8 +201,8 @@ describe("PartyRoom: playing", () => {
     room.start("ana", FIVE_ROUNDS, 0);
     for (let round = 1; round <= 5; round++) {
       expect(room.viewFor("ana").roundNumber).toBe(round);
-      room.guess("ana", { lat: PARIS.lat, lng: PARIS.lng });
-      room.endRound();
+      room.guess("ana", { lat: PARIS.lat, lng: PARIS.lng }, 0);
+      room.endRound(0);
       room.next("ana", round);
     }
     const final = room.viewFor("ana");

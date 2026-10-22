@@ -108,6 +108,9 @@ export function GoogleGameMap({ view, className = "" }: { view: GameMapView; cla
           zoomControl: true,
           clickableIcons: false, // clicking a shop or landmark mustn't open Google's info box
           gestureHandling: "greedy", // scroll wheel zooms without holding Ctrl
+          // Show ONE world only: in a wide or tall map box Google would otherwise repeat the world sideways
+          // and add grey bands above and below. Google won't zoom out further than this fills the box.
+          restriction: { latLngBounds: { north: 85, south: -85, west: -180, east: 180 }, strictBounds: true },
         });
         map.addListener("click", (clicked: google.maps.MapMouseEvent) => {
           const current = viewRef.current;

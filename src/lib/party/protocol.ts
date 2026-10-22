@@ -75,6 +75,8 @@ export type PartyView = {
   // While a round is being played: where Street View points, and when time runs out (server clock, ms).
   panorama: { lat: number; lng: number } | null;
   endsAt: number | null;
+  // On the results screen: when the next round (or the final standings) starts by itself (server clock, ms).
+  nextAt: number | null;
   yourGuess: { lat: number; lng: number } | null;
   // After a round: the answer and everybody's guesses.
   result: { answer: { lat: number; lng: number }; country: string; guesses: RoundGuess[] } | null;

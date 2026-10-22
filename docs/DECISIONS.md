@@ -367,6 +367,11 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
 - **Lobby settings (2026-10-22):** the host picks the map (custom dropdown `src/components/ui/Select.tsx`, ARIA listbox),
   rounds 3/5/7/10 and time 30s/1m/90s/2m/no limit (`src/components/ui/SegmentedControl.tsx`, ARIA radio group); the
   server only accepts those values (Zod `z.literal([...])`); `pickGameLocations` takes the round count.
+- **Pacing & HUD (2026-10-22, like WorldGuessr — ideas only):** results show 10 s then the next round starts by itself
+  (host may Skip); when only one connected player is still guessing, their time drops to 20 s (also in "no limit"
+  rounds), with a 4 s notice. One server timer per party (`schedule`) handles both. HUD (`PartyHud.tsx`): 2 players =
+  two score bars (You left, opponent right); 3+ = your bar + place and compact standings (top 3 + you, "+N more");
+  round + big countdown in the middle. The Google map is restricted to one world (no repeats / grey bands).
 - **Online (2026-10-22):** website on Vercel, party server on Render free (`render.yaml`; Vercel Hobby closes
   connections after 300 s, and in-memory parties need one instance). Signed-in players prove their account with a
   5-minute HMAC-signed ticket from `/api/party/ticket` (`src/lib/party/ticket.ts`, shared `PARTY_SECRET`), because

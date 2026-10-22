@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Crown, LogOut, MapPin, Timer, Trophy } from "lucide-react";
+import { Check, LogOut, MapPin, Timer, Trophy } from "lucide-react";
 import { GoogleGameMap, type GameMapView, type PartyMapRound } from "@/components/GoogleGameMap";
 import { StreetViewPanorama } from "@/components/StreetViewPanorama";
 import { MAX_SCORE } from "@/lib/game/scoring";
@@ -9,6 +9,8 @@ import type { ClientMessage, PartyView } from "@/lib/party/protocol";
 import type { Coordinates } from "@/types/geo";
 import { GLASS, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../play/gameStyles";
 import { useGuessMapExpansion } from "../play/useGuessMapExpansion";
+import { LAST_GUESSER_SECONDS, RESULTS_SECONDS } from "@/lib/party/room";
+import { PartyHud } from "./PartyHud";
 
 const GROW_MOTION = "transition-[width,height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
 const km = (value: number) => `${Math.round(value).toLocaleString()} km`;
@@ -24,6 +26,30 @@ function useSecondsLeft(endsAt: number | null, clockOffset: number) {
   }, [endsAt]);
   if (endsAt === null) return null;
   return Math.max(0, Math.ceil((endsAt - (now + clockOffset)) / 1000));
+}
+
+const NOTICE_MS = 4000;
+
+// Pops in, stays NOTICE_MS, then fades out. The message is fixed when it appears (e.g. "20 seconds left").
+function HurryNotice({ message }: { message: string }) {
+  const [text] = useState(message);
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisible(false), NOTICE_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return (
+    <p
+      role="alert"
+      className={`pointer-events-none absolute top-28 left-1/2 z-[550] flex -translate-x-1/2 items-center gap-2 rounded-full border border-rose-200/40 bg-rose-600/95 px-5 py-2.5 text-sm font-bold whitespace-nowrap shadow-2xl shadow-rose-950/60 transition-[opacity,transform] duration-500 sm:text-base ${
+        visible ? "opacity-100" : "-translate-y-2 opacity-0"
+      }`}
+    >
+      <Timer aria-hidden="true" className="size-5" />
+      {text}
+    </p>
+  );
 }
 
 type PartyGameProps = {
@@ -58,6 +84,7 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
   const guessButtonRef = useRef<HTMLDivElement>(null);
   const mapExpanded = useGuessMapExpansion(guessing, mapBoxRef, guessButtonRef);
   const secondsLeft = useSecondsLeft(view.endsAt, clockOffset);
+  const nextIn = useSecondsLeft(view.nextAt, clockOffset);
 
   const toMapRound = (round: PartyView["history"][number]): PartyMapRound => ({
     roundNumber: round.roundNumber,
@@ -164,13 +191,26 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
                     </li>
                   ))}
               </ol>
-              {isHost ? (
-                <button type="button" onClick={() => send({ type: "next" })} className={PRIMARY_BUTTON}>
-                  {view.roundNumber >= view.totalRounds ? "See final standings" : "Next round"}
-                </button>
-              ) : (
-                <p className="rounded-xl bg-white/5 px-4 py-2.5 text-center text-white/70">Waiting for the host…</p>
-              )}
+              {/* Moves on by itself after the countdown (like WorldGuessr); the host may skip ahead. */}
+              <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3" aria-live="polite">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">
+                    {view.roundNumber >= view.totalRounds ? "Final standings" : "Next round"} in{" "}
+                    <span className="text-amber-300 tabular-nums">{nextIn ?? 0}s</span>
+                  </p>
+                  <div aria-hidden="true" className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-sky-400 to-blue-600 transition-[width] duration-300 ease-linear"
+                      style={{ width: `${Math.min(100, ((nextIn ?? 0) / RESULTS_SECONDS) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                {isHost && (
+                  <button type="button" onClick={() => send({ type: "next" })} className={`${SECONDARY_BUTTON} px-3 py-1.5 text-sm`}>
+                    Skip
+                  </button>
+                )}
+              </div>
             </>
           )}
 
@@ -216,42 +256,33 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
         </section>
       )}
 
-      {/* ---------- Top bar ---------- */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-[600] flex flex-wrap items-start justify-between gap-2 p-3 sm:p-4">
-        <div className={`${GLASS} pointer-events-auto flex items-center gap-3 px-4 py-2.5 text-sm font-semibold sm:text-base`}>
-          <span>
-            Round {view.roundNumber} / {view.totalRounds}
-          </span>
-          {view.phase === "round" && secondsLeft !== null && (
-            <>
-              <span aria-hidden="true" className="h-4 w-px bg-white/30" />
-              <span className={`flex items-center gap-1.5 tabular-nums ${secondsLeft <= 10 ? "text-rose-300" : "text-amber-300"}`}>
-                <Timer aria-hidden="true" className="size-4" />
-                {secondsLeft}s
-              </span>
-            </>
-          )}
-          <span aria-hidden="true" className="h-4 w-px bg-white/30" />
-          <span className="text-white/70">Party {view.code}</span>
-        </div>
+      {/* ---------- Top: the score HUD while playing; a small round label on the results ---------- */}
+      {view.phase === "round" ? (
+        <PartyHud view={view} secondsLeft={secondsLeft} onLeave={onLeave} />
+      ) : (
+        <header className="pointer-events-none absolute top-0 left-0 z-[600] p-3 sm:p-4">
+          <p className={`${GLASS} flex items-center gap-3 px-4 py-2.5 text-sm font-semibold sm:text-base`}>
+            <span>
+              Round {view.roundNumber} / {view.totalRounds}
+            </span>
+            <span aria-hidden="true" className="h-4 w-px bg-white/30" />
+            <span className="text-white/70">Party {view.code}</span>
+          </p>
+        </header>
+      )}
 
-        {/* Who has guessed (during a round), with live scores */}
-        <ul className="pointer-events-auto flex max-w-full flex-wrap justify-end gap-1.5" aria-label="Players">
-          {view.players.map((player) => (
-            <li
-              key={player.id}
-              className={`${GLASS} flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${player.connected ? "" : "opacity-50"}`}
-              title={player.connected ? undefined : "Reconnecting…"}
-            >
-              <span aria-hidden="true" className="size-2.5 rounded-full" style={{ background: player.color }} />
-              {player.name}
-              {player.id === view.hostId && <Crown aria-label="Host" className="size-3 text-amber-300" />}
-              <span className="text-amber-300 tabular-nums">{player.score.toLocaleString()}</span>
-              {view.phase === "round" && player.guessed && <Check aria-label="Guessed" className="size-3.5 text-emerald-300" />}
-            </li>
-          ))}
-        </ul>
-      </header>
+      {/* The last player still guessing: everyone else is done, so the clock dropped to 20 s (like WorldGuessr).
+          A short notice (4 s, once per round) — the round box keeps counting down after it fades. */}
+      {view.phase === "round" && !view.yourGuess && waitingFor === 1 && view.players.length > 1 && (
+        <HurryNotice
+          key={view.roundNumber}
+          message={`${
+            view.players.length === 2
+              ? `${view.players.find((player) => player.id !== view.you)?.name ?? "Your opponent"} guessed!`
+              : "Everyone else has guessed —"
+          } ${secondsLeft !== null ? `${Math.min(secondsLeft, LAST_GUESSER_SECONDS)} seconds left` : "hurry!"}`}
+        />
+      )}
 
       {error && (
         <p role="alert" className={`${GLASS} absolute top-20 left-1/2 z-[650] -translate-x-1/2 px-4 py-2 text-sm text-rose-200`}>
