@@ -131,6 +131,10 @@ since `759bc48`. The owner pushes later.
   ✅ Country maps (2026-10-22): 41 countries with ≥ 20 spots, "Countries" section on /maps (grouped by continent, big
   flags) and in the in-game map list. Verified: curl jp/sn → 201 (Japan ×5), zz/FR → 400; Chrome: /maps countries, France
   and Japan games, no console errors (fixed a prerender error with `await connection()` in `src/app/play/page.tsx`).
+- ✅ First-game flow (2026-10-22, D-023): sign-in → home; sign out only on /profile; Famous places map (18 landmarks,
+  `npm run seed:famous`) as the first game (email: button on /email-verified; Google: newUserCallbackURL). Verified in
+  Chrome: top bar without sign-out, /maps Famous card, /profile Sign out button, a Famous places game starts.
+  **Owner to test:** sign in → lands on home; a brand-new account → first game.
   Next: map choice on Create Party (static, Phase 9).
 
 ## Known issues (2026-10-22)
@@ -221,3 +225,10 @@ Other changes:
 The owner commits locally (`git add .` + `git commit`). Then `NEXT` → Phase 4, step 1:
 explain databases/MongoDB, then the owner creates a free MongoDB Atlas account and cluster
 (verify current free-tier limits first).
+- ✅ Phase 9 started — Party mode (2026-10-22, D-024): `npm run party` WebSocket server (`src/party/server.ts`, `ws` 8.22),
+  pure party rules `src/lib/party/room.ts` (+14 tests), shared Zod protocol `src/lib/party/protocol.ts`, `/party` page
+  (entry → lobby → rounds → results → final), Create/Join Party links on the home Party card, `pickGameLocations`
+  shared with single player, party pins on the Google map. Verified: scripted 2-player test (origin check, codes,
+  host-only actions, hidden answers, server scoring, rejoin) and a full 5-round game in Chrome against a bot
+  (timer timeout, everyone-guessed early end, final standings, play again, refresh = same seat & host kept).
+  91 tests pass. Next in Phase 9: Ranked/Unranked matchmaking; Phase 10: free hosting for the party server.

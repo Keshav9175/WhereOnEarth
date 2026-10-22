@@ -9,17 +9,26 @@ import {
   numberedGuessPinSvg,
   PIN_HEIGHT,
   PIN_TIP_Y,
+  playerPinSvg,
 } from "@/lib/map/pinSvg";
 import type { Coordinates } from "@/types/geo";
 
 export type SummaryRound = { roundNumber: number; guess: Coordinates; answer: Coordinates };
+
+// Party games: one or more rounds, each with the answer and every player's guess in their colour.
+export type PartyMapRound = {
+  roundNumber: number;
+  answer: Coordinates;
+  guesses: (Coordinates & { playerId: string; name: string; color: string })[];
+};
 
 // What the map should show right now. The SAME map is reused for all of these (see "billing" below).
 export type GameMapView =
   | { mode: "hidden" }
   | { mode: "guess"; guess: Coordinates | null; onGuessChange: (guess: Coordinates) => void }
   | { mode: "result"; guess: Coordinates; answer: Coordinates }
-  | { mode: "summary"; rounds: SummaryRound[]; focusedRound: number | null };
+  | { mode: "summary"; rounds: SummaryRound[]; focusedRound: number | null }
+  | { mode: "party"; rounds: PartyMapRound[] };
 
 // Advanced markers need a "Map ID". DEMO_MAP_ID is Google's ready-made one for development; create a
 // free Map ID in Google Cloud and set NEXT_PUBLIC_GOOGLE_MAP_ID before launch (Phase 10).
@@ -191,6 +200,26 @@ export function GoogleGameMap({ view, className = "" }: { view: GameMapView; cla
         visible.flatMap((round) => [round.guess, round.answer]),
         { top: 90, bottom: 40, left: 40, right: 40 },
         focusedRound === null ? 5 : 8,
+      );
+    }
+
+    if (shown.mode === "party") {
+      for (const round of shown.rounds) {
+        // Each player's pin, joined to the answer by a dashed line. (The name goes into `title`, a plain
+        // property — never into HTML, since players type their own names.)
+        for (const guess of round.guesses) {
+          addLine(guess, round.answer, 0.8);
+          addPin(guess, playerPinSvg(guess.color, guess.name, guess.playerId), `${guess.name}`, 1);
+        }
+        const answerPin = shown.rounds.length > 1 ? numberedAnswerPinSvg(round.roundNumber) : ANSWER_PIN_SVG;
+        addPin(round.answer, answerPin, `Round ${round.roundNumber}: the real location`, 2);
+      }
+      fitPoints(
+        map,
+        libs,
+        shown.rounds.flatMap((round) => [round.answer, ...round.guesses]),
+        { top: 90, bottom: 50, left: 50, right: 50 },
+        shown.rounds.length > 1 ? 5 : 8,
       );
     }
   }, [ready, overlayKey]);

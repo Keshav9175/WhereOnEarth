@@ -317,3 +317,60 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
   WebSocket connections open, so Phase 9 multiplayer needs a second host or a move (e.g. Cloudflare Durable Objects)
   — decided in Phase 9.
 - **Status:** Accepted (2026-10-22).
+
+## D-023 — One persistent top bar in the root layout, sliding highlight, page crossfade
+- **Context:** each page drew its own top bar, so every navigation rebuilt it and the page "jumped".
+- **Decision:** `NavBar` (client component) is rendered ONCE in `src/app/layout.tsx`, together with the ocean
+  background on `<body>`; layouts survive navigation in the App Router, so the bar and background never re-render
+  between pages. The signed-in area (`HomeUserArea`, server) is passed in as a prop. The bar hides itself on `/play`
+  (the game has its own bar) and shows only the logo on account pages. One blue highlight slides to the active tab
+  (`usePathname` + measured position; moves at once on click). Pages fade out/in with React 19.3's `<ViewTransition>` keyed
+  by path (`PageTransition`: exit 150 ms, enter 260 ms + 6px rise, no size morph; `scrollbar-gutter: stable` so pages with
+  and without a scrollbar line up (
+  disabled for reduced motion); the bar has its own transition name and is shown live, not faded.
+  `PageShell` no longer takes `current`/`minimal` and no longer renders the bar.
+- **Status:** Accepted (2026-10-22).
+
+## D-023 — First game for new players: the Famous places map
+- **Decision:** signing in lands on the home screen (no auto-started game). A brand-new player's first game is the
+  **Famous places** map (`/play?map=famous`, `FIRST_GAME_URL` in `src/lib/maps/catalog.ts`): email users get a
+  "Play your first game" button on `/email-verified`; Google sign-ups go there directly via Better Auth's
+  `newUserCallbackURL`. Sign out moved from the top bar to `/profile`.
+- **Data:** 18 hand-picked landmarks (`scripts/data/famous-places.ts`, our own list) seeded by `npm run seed:famous`
+  as locations with `featured: true` + `landmark`. At famous spots the nearest panorama is usually a visitor photo
+  sphere (rejected, D-019), so the script probes rings of points (0–250 m, 8 directions, 30 m radius) until it finds
+  Google's own imagery. `source=google` also worked in a test but is **undocumented** (docs list only
+  `default`/`outdoor`), so we don't use it.
+- **Reference:** WorldGuessr gives new players an onboarding game on a fixed set of famous spots — behaviour studied
+  only; no code or data copied (PolyForm Noncommercial).
+- **Status:** Accepted (2026-10-22).
+
+## D-024 — Party mode (Phase 9 multiplayer): our own WebSocket server with `ws`
+- **Context:** Create Party / Join Party needs every player's screen to update instantly. Next.js route handlers
+  answer single requests and (on Vercel) can't hold connections open. WorldGuessr (reference only, nothing copied)
+  runs a separate real-time server with 6-digit party codes; CLAUDE.md §5 planned "a separate Node service only
+  when genuinely required (real-time multiplayer, Phase 9)". The owner approved Phase 9 and asked for a free solution.
+- **Decision:** a small Node WebSocket server, `src/party/server.ts` (`npm run party`, port 3001), using `ws` 8.22
+  (MIT, the most widely used Node WebSocket library; Node has no built-in WebSocket *server*). The rules of a party
+  live in a pure, tested class `src/lib/party/room.ts`; messages are defined and Zod-checked in
+  `src/lib/party/protocol.ts` (shared by both sides). Locations come from the same engine as single player
+  (`pickGameLocations`), scores from the same pure functions — computed on the server only.
+- **Security:** only our website's Origin may connect; every message is schema-checked; max 4 KB messages and 40
+  messages / 10 s per connection; answers and other players' guesses are hidden until a round ends (your own guess
+  comes back without distance/score); signed-in players are recognised by asking `/api/me` with their cookie; one
+  account = one seat; player names never go into HTML (pin initials are filtered to letters/digits).
+- **Reliability:** each tab gets a secret rejoin token (sessionStorage) → refresh = same seat; dropped players keep
+  their seat 60 s, a dropped host keeps the role 15 s, empty parties close after 5 min; heartbeat pings every 30 s.
+- **Trade-offs:** parties live in memory (a server restart ends running parties — fine for now; Redis only if we
+  ever run several servers). Each party player uses their own Google loads. Hosting the party server for free is
+  decided in Phase 10 (free tiers may sleep when idle → slow first connection).
+- **Lobby settings (2026-10-22):** the host picks the map (custom dropdown `src/components/ui/Select.tsx`, ARIA listbox),
+  rounds 3/5/7/10 and time 30s/1m/90s/2m/no limit (`src/components/ui/SegmentedControl.tsx`, ARIA radio group); the
+  server only accepts those values (Zod `z.literal([...])`); `pickGameLocations` takes the round count.
+- **Online (2026-10-22):** website on Vercel, party server on Render free (`render.yaml`; Vercel Hobby closes
+  connections after 300 s, and in-memory parties need one instance). Signed-in players prove their account with a
+  5-minute HMAC-signed ticket from `/api/party/ticket` (`src/lib/party/ticket.ts`, shared `PARTY_SECRET`), because
+  cookies aren't sent across sites. The server answers `GET /health` and uses Render's `PORT`.
+- **Note:** decision numbers D-021…D-023 were each used twice/three times by two sessions working in parallel —
+  renumber when the docs are next tidied.
+- **Status:** Accepted (2026-10-22).

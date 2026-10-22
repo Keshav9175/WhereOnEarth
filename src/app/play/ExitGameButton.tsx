@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { PRIMARY_FILL } from "@/components/formStyles";
 
 const ROUND_BUTTON =
   "pointer-events-auto grid size-11 cursor-pointer place-items-center rounded-2xl border border-white/15 bg-slate-950/60 text-white shadow-xl backdrop-blur-md hover:bg-slate-900/80 focus-visible:outline-2 focus-visible:outline-amber-300";
@@ -59,7 +60,7 @@ export function ExitGameButton({ inProgress }: ExitGameButtonProps) {
               ref={stayRef}
               type="button"
               onClick={() => setConfirming(false)}
-              className="flex-1 cursor-pointer rounded-xl bg-amber-400 px-3 py-2 font-bold text-slate-950 hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className={`flex-1 cursor-pointer rounded-xl px-3 py-2 font-bold ${PRIMARY_FILL} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white`}
             >
               Stay
             </button>

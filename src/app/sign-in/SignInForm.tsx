@@ -41,7 +41,8 @@ export function SignInForm() {
         return;
       }
 
-      router.push("/play");
+      // Signing in lands on the home screen; the player chooses what to play from there.
+      router.push("/");
       router.refresh();
     } catch {
       setError("Could not reach the server. Please try again.");

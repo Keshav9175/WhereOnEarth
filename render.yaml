@@ -1,0 +1,21 @@
+# Render "Blueprint": tells Render how to run the party server (src/party/server.ts) for free.
+# Render reads this file from the GitHub repository when you create a Blueprint (see
+# docs/DEVELOPMENT_WORKFLOW.md §11). The website itself stays on Vercel.
+services:
+  - type: web
+    name: whereonearth-party
+    runtime: node
+    plan: free
+    # Install the project (devDependencies included: the server runs TypeScript through tsx).
+    buildCommand: npm ci --include=dev
+    startCommand: npx tsx src/party/server.ts
+    healthCheckPath: /health
+    envVars:
+      # Secrets: "sync: false" = Render asks you for the value; it is never stored in this file.
+      - key: MONGODB_URI
+        sync: false
+      - key: PARTY_SECRET
+        sync: false
+      # Your website's address, e.g. https://whereonearth.vercel.app (only it may connect).
+      - key: BETTER_AUTH_URL
+        sync: false

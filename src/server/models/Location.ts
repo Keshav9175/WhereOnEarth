@@ -12,12 +12,18 @@ const locationSchema = new Schema(
     // Which continent map this location belongs to (see src/lib/maps/catalog.ts).
     // null = only on the World map (open-ocean island nations).
     continent: { type: String, enum: [...CONTINENTS, null], default: null },
+    // Hand-picked landmarks for the Famous places map (scripts/seed-famous-places.ts).
+    featured: { type: Boolean, default: false },
+    // The landmark's name ("Eiffel Tower"); only set on featured locations.
+    landmark: { type: String, trim: true, default: null },
   },
   { timestamps: true },
 );
 
-// Continent maps filter on this field.
+// Continent maps filter on continent, country maps on countryCode, Famous places on featured.
 locationSchema.index({ continent: 1 });
+locationSchema.index({ countryCode: 1 });
+locationSchema.index({ featured: 1 }, { partialFilterExpression: { featured: true } });
 
 // A TypeScript type created automatically from the schema above.
 export type Location = InferSchemaType<typeof locationSchema>;

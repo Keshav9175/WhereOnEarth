@@ -3,6 +3,7 @@ import { MAX_SCORE } from "@/lib/game/scoring";
 import { ROUNDS_PER_GAME } from "@/server/models/Game";
 import { getPlayerStats, listGamesForUser } from "@/server/services/playerService";
 import { getSignedInUser } from "@/server/session";
+import { SignOutButton } from "@/components/SignOutButton";
 import { GameHistoryTable } from "./GameHistoryTable";
 
 const HISTORY_LIMIT = 20;
@@ -44,6 +45,10 @@ export async function PlayerProfile() {
           <h1 className="truncate text-3xl font-bold">{user.name}</h1>
           <p className="text-white/70">Playing since {MEMBER_SINCE_FORMAT.format(user.createdAt)}</p>
         </div>
+        <SignOutButton
+          showLabel
+          className="ml-auto shrink-0 px-4 py-2 text-sm font-semibold text-white/85 ring-1 ring-white/25 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-amber-300"
+        />
       </div>
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">

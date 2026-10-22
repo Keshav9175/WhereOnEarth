@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 // /leaderboard — top players by their best completed game.
 export default function LeaderboardPage() {
   return (
-    <PageShell current="/leaderboard">
+    <PageShell>
       <section className={`mx-auto flex w-full max-w-3xl flex-col gap-6 p-5 sm:p-8 ${GLASS_PANEL}`}>
         <div className="flex items-center gap-4">
           <span className="grid size-14 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 shadow-lg shadow-amber-900/40">

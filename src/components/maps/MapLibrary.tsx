@@ -2,8 +2,14 @@ import "flag-icons/css/flag-icons.min.css";
 import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ArrowRight } from "lucide-react";
-import { MAPS, MIN_COUNTRY_MAP_LOCATIONS, type Continent, type GameMap } from "@/lib/maps/catalog";
+import { ArrowRight, Landmark } from "lucide-react";
+import {
+  DEFAULT_MAP_ID,
+  MAPS,
+  MIN_COUNTRY_MAP_LOCATIONS,
+  type Continent,
+  type GameMap,
+} from "@/lib/maps/catalog";
 import { ROUNDS_PER_GAME } from "@/server/models/Game";
 import {
   getMapStats,
@@ -64,7 +70,7 @@ function WorldCard({ map, stats }: { map: GameMap; stats: MapStats }) {
         <h2 className="text-4xl font-black tracking-tight sm:text-5xl">{map.name}</h2>
         <p className="max-w-md text-white/80">{map.description}</p>
         <p className="text-sm text-white/60 tabular-nums">{statsLine(stats)}</p>
-        <span className="mt-2 inline-flex items-center gap-2 self-start rounded-xl bg-amber-400 px-5 py-2.5 font-bold text-slate-950 shadow-lg transition group-hover:bg-amber-300">
+        <span className="mt-2 inline-flex items-center gap-2 self-start rounded-xl bg-gradient-to-b from-sky-500 to-blue-700 px-5 py-2.5 font-bold text-white shadow-lg shadow-blue-900/50 transition group-hover:from-sky-400 group-hover:to-blue-600">
           Play the world
           <ArrowRight aria-hidden="true" className="size-4 transition group-hover:translate-x-0.5" />
         </span>
@@ -81,6 +87,40 @@ function WorldCard({ map, stats }: { map: GameMap; stats: MapStats }) {
 }
 
 const FLAGS_PER_CARD = 7;
+
+// The hand-picked landmarks map: recommended as a first game, so it sits right under World.
+function FamousCard({ map, stats }: { map: GameMap; stats: MapStats }) {
+  return (
+    <Link
+      href={`/play?map=${map.id}`}
+      className={`group flex flex-col gap-4 rounded-2xl bg-[#011c47]/90 p-5 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:bg-[#012a66] hover:ring-sky-400/60 sm:flex-row sm:items-center sm:gap-6 ${FOCUS}`}
+    >
+      <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-sky-400/15 text-sky-300 ring-1 ring-sky-300/30">
+        <Landmark aria-hidden="true" className="size-6" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 className="text-xl font-bold">{map.name}</h2>
+          <span className="rounded-full bg-sky-400/15 px-2.5 py-0.5 text-xs font-semibold text-sky-200">
+            Best first game
+          </span>
+        </div>
+        <p className="text-sm text-white/70">
+          {map.description} {stats.locations} landmarks, from the Eiffel Tower to Machu Picchu.
+        </p>
+      </div>
+      <div aria-hidden="true" className="flex flex-wrap items-center gap-1.5 text-lg sm:max-w-xs sm:justify-end">
+        {stats.countries.slice(0, 10).map((country) => (
+          <Flag key={country.code} country={country} />
+        ))}
+      </div>
+      <span className="inline-flex items-center gap-1 text-sm font-semibold text-sky-300">
+        Play
+        <ArrowRight aria-hidden="true" className="size-4 transition group-hover:translate-x-0.5" />
+      </span>
+    </Link>
+  );
+}
 
 function ContinentCard({ map, stats }: { map: GameMap & { continent: Continent }; stats: MapStats }) {
   const accent = ACCENTS[map.continent];
@@ -207,11 +247,15 @@ export async function MapLibrary() {
   return (
     <div className="flex flex-col gap-5">
       {MAPS.map((map) =>
-        map.continent === null ? <WorldCard key={map.id} map={map} stats={stats[map.id]} /> : null,
+        map.id === DEFAULT_MAP_ID ? (
+          <WorldCard key={map.id} map={map} stats={stats[map.id]} />
+        ) : map.featured ? (
+          <FamousCard key={map.id} map={map} stats={stats[map.id]} />
+        ) : null,
       )}
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {MAPS.map((map) =>
-          map.continent === null ? null : (
+          !map.continent ? null : (
             <li key={map.id} className="flex">
               <ContinentCard map={{ ...map, continent: map.continent }} stats={stats[map.id]} />
             </li>

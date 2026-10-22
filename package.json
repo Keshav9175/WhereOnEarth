@@ -13,7 +13,9 @@
     "generate:locations": "tsx --env-file=.env.local scripts/generate-locations.ts",
     "postinstall": "node scripts/copy-maplibre-worker.mjs",
     "prebuild": "node scripts/copy-maplibre-worker.mjs",
-    "backfill:locations": "tsx --env-file=.env.local scripts/backfill-locations.ts"
+    "backfill:locations": "tsx --env-file=.env.local scripts/backfill-locations.ts",
+    "party": "tsx --env-file=.env.local src/party/server.ts",
+    "seed:famous": "tsx --env-file=.env.local scripts/seed-famous-places.ts"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.3",
@@ -29,6 +31,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-leaflet": "^5.0.0",
+    "ws": "^8.22.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -39,6 +42,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.2",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
     "tailwindcss": "^4.3.3",

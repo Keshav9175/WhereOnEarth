@@ -467,3 +467,22 @@ When a new field is added, old records don't have it yet. A **backfill** is a on
 ### Hot reload keeps old models
 Mongoose models are created once and reused. After changing a schema, the running dev server can keep using the
 old one (our new `mapId` field was silently dropped) until `npm run dev` is restarted.
+
+## Real-time multiplayer (D-024)
+
+### HTTP vs WebSocket
+Normal web requests are a phone call where the browser always calls and the server can only answer. For a party,
+the SERVER must tell everyone "Ben guessed!" the moment it happens. A **WebSocket** is a line that stays open in both
+directions, so the server can push updates at any time.
+
+### Server-authoritative state
+The party server owns the truth (who's in, which round, the scores). Browsers only send intentions ("I guess here");
+the server checks them, updates the party, and sends every player their OWN view (with secrets hidden).
+
+### Pure rules + thin server
+`room.ts` holds the rules with no network or timers, so it's easy to test. `server.ts` only connects people,
+runs timers and passes events to the room. Same idea as our pure scoring functions.
+
+### Reconnecting
+Connections drop (Wi-Fi, refresh). The browser reconnects automatically and proves who it is with a secret token,
+and the server keeps the seat for a minute — so a refresh doesn't kick you out.

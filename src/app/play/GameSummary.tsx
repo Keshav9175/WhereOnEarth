@@ -81,7 +81,7 @@ export function GameSummary({ game, onPlayAgain, busy, focusedRound, onFocusRoun
               <button
                 type="button"
                 onClick={() => onFocusRound(null)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-amber-300 ring-1 ring-amber-300/50 hover:bg-amber-300/10 focus-visible:outline-2 focus-visible:outline-amber-300"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-sky-300 ring-1 ring-sky-300/50 hover:bg-sky-300/10 focus-visible:outline-2 focus-visible:outline-amber-300"
               >
                 <Maximize2 aria-hidden="true" className="size-3.5" /> Show all rounds
               </button>

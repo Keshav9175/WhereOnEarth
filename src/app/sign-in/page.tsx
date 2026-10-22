@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 // /sign-in — Google button + email/password form.
 export default function SignInPage() {
   return (
-    <PageShell minimal>
+    <PageShell>
       <AuthCard
         title="Welcome back"
         subtitle="Sign in to save your games and climb the leaderboard."

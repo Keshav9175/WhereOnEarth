@@ -54,3 +54,11 @@ describe("continentFromNaturalEarth", () => {
     expect(continentFromNaturalEarth(undefined)).toBeNull();
   });
 });
+
+describe("famous places map", () => {
+  it("exists, uses only featured locations, and is the first-game map", async () => {
+    const { FAMOUS_MAP_ID, FIRST_GAME_URL } = await import("./catalog");
+    expect(findMap(FAMOUS_MAP_ID)).toMatchObject({ featured: true, continent: null, countryCode: null });
+    expect(FIRST_GAME_URL).toBe(`/play?map=${FAMOUS_MAP_ID}`);
+  });
+});

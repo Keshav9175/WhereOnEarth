@@ -38,7 +38,7 @@ async function ResetContent({ searchParams }: PageProps) {
 // /reset-password — choose a new password after clicking the emailed link.
 export default function ResetPasswordPage({ searchParams }: PageProps) {
   return (
-    <PageShell minimal>
+    <PageShell>
       <AuthCard
         title="Choose a new password"
         subtitle="Pick something you haven't used here before."

@@ -74,7 +74,7 @@ Re-verify all pricing pages at the start of Phase 8.
 
 | Technology | Purpose | Phase | Status |
 |---|---|---|---|
-| WebSockets (library chosen then, e.g. Socket.IO or `ws`) | Real-time messages for multiplayer rooms | 9 | Candidate |
+| WebSockets: `ws` 8.22 (MIT) — our own party server `src/party/server.ts` | Real-time messages for party rooms | 9 | In use (D-024) |
 | Redis | Shared state across server instances, **only if needed** | 9–10 | Only if needed |
 | End-to-end testing (e.g. Playwright) | Tests the app through a real browser | 10 | Candidate |
 | GitHub | Remote backup and collaboration | 1 (optional) | Planned |

@@ -7,10 +7,12 @@ import { signOut } from "@/lib/auth-client";
 
 type SignOutButtonProps = {
   className?: string;
+  // Show the words "Sign out" next to the icon (the profile page does).
+  showLabel?: boolean;
 };
 
 // A small client component, so server-rendered areas (like the home nav) can still offer "Sign out".
-export function SignOutButton({ className = "" }: SignOutButtonProps) {
+export function SignOutButton({ className = "", showLabel = false }: SignOutButtonProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -26,11 +28,12 @@ export function SignOutButton({ className = "" }: SignOutButtonProps) {
       type="button"
       onClick={handleSignOut}
       disabled={busy}
-      aria-label="Sign out"
+      aria-label={showLabel ? undefined : "Sign out"}
       title="Sign out"
-      className={`grid cursor-pointer place-items-center rounded-full disabled:cursor-wait disabled:opacity-60 ${className}`}
+      className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-full disabled:cursor-wait disabled:opacity-60 ${className}`}
     >
       <LogOut aria-hidden="true" className="size-5" />
+      {showLabel && (busy ? "Signing out…" : "Sign out")}
     </button>
   );
 }

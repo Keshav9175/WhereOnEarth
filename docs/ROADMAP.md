@@ -111,6 +111,7 @@ marker placement; finalize the location-selection strategy (D-004).
 **Includes:** architecture review, WebSocket service (separate folder, created then), rooms, server
 timers, synchronized rounds, reconnection, and Redis only if justified.
 **Acceptance:** two browsers can play a synchronized round with server-computed scores.
+**Status (2026-10-22):** Party mode built (D-024): create/join with 6-digit codes, lobby, synchronized 5-round games with timers, results, final standings, rejoin. Ranked/Unranked matchmaking still to do.
 
 ## Phase 10 — Production readiness
 **Goal:** a deployed, tested, secure app.

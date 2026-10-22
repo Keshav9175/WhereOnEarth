@@ -24,6 +24,9 @@ import rankedArt from "../../../public/Card 4.png";
 type SubOption = {
   label: string;
   icon: LucideIcon;
+  // A playable choice links to its page and shows `hint`; without `href` it shows "Coming soon".
+  href?: string;
+  hint?: string;
 };
 
 type GameMode = {
@@ -46,7 +49,7 @@ const MATCH_SIZES: [SubOption, SubOption] = [
   { label: "2 vs 2", icon: Users },
 ];
 
-// Singleplayer is playable; Ranked, Unranked and Party arrive in Phase 9 (multiplayer).
+// Singleplayer and Party are playable; Ranked and Unranked (matchmaking) come later in Phase 9.
 // Their sub-options are shown now so players can see what's coming — they do nothing yet.
 const MODES: GameMode[] = [
   {
@@ -84,8 +87,8 @@ const MODES: GameMode[] = [
     iconColor: "text-lime-200",
     image: partyArt,
     options: [
-      { label: "Create Party", icon: UserPlus },
-      { label: "Join Party", icon: LogIn },
+      { label: "Create Party", icon: UserPlus, href: "/party?create=1", hint: "Invite friends" },
+      { label: "Join Party", icon: LogIn, href: "/party?join=1", hint: "Enter a code" },
     ],
   },
 ];
@@ -213,23 +216,38 @@ function ExpandableCard({ mode, isOpen, onOpen, onClose }: ExpandableCardProps) 
       >
         <div className="overflow-hidden">
           <div className="relative flex items-stretch gap-2 px-3 pt-1 pb-3">
-            {mode.options.map((option) => (
-              <button
-                key={option.label}
-                type="button"
-                aria-disabled="true"
-                aria-label={`${option.label} — coming soon`}
-                className={`flex flex-1 cursor-not-allowed flex-col items-center gap-0.5 rounded-xl bg-slate-950/30 px-2 py-2 ring-1 ring-white/25 backdrop-blur-sm hover:bg-slate-950/40 ${FOCUS_RING}`}
-              >
-                <span className="flex items-center gap-1.5 text-sm font-bold text-white">
-                  <option.icon aria-hidden="true" className="size-4" />
-                  {option.label}
-                </span>
-                <span className="text-[10px] font-semibold tracking-wider text-white/70 uppercase">
-                  Coming soon
-                </span>
-              </button>
-            ))}
+            {mode.options.map((option) => {
+              const content = (
+                <>
+                  <span className="flex items-center gap-1.5 text-sm font-bold text-white">
+                    <option.icon aria-hidden="true" className="size-4" />
+                    {option.label}
+                  </span>
+                  <span className="text-[10px] font-semibold tracking-wider text-white/70 uppercase">
+                    {option.href ? option.hint : "Coming soon"}
+                  </span>
+                </>
+              );
+              return option.href ? (
+                <Link
+                  key={option.label}
+                  href={option.href}
+                  className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl bg-slate-950/30 px-2 py-2 ring-1 ring-white/40 backdrop-blur-sm hover:bg-slate-950/50 hover:ring-white/70 ${FOCUS_RING}`}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <button
+                  key={option.label}
+                  type="button"
+                  aria-disabled="true"
+                  aria-label={`${option.label} — coming soon`}
+                  className={`flex flex-1 cursor-not-allowed flex-col items-center gap-0.5 rounded-xl bg-slate-950/30 px-2 py-2 ring-1 ring-white/25 backdrop-blur-sm hover:bg-slate-950/40 ${FOCUS_RING}`}
+                >
+                  {content}
+                </button>
+              );
+            })}
             <button
               type="button"
               onClick={closeAndRefocus}

@@ -1,9 +1,9 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { NavBar } from "./NavBar";
 import worldMap from "../../public/Vibrant Cartoon World Map Ocean Background.png";
 
-// The ocean-blue background used across the site (same colours as the home page).
+// The ocean-blue background used across the site. It's painted once on <body> (src/app/layout.tsx),
+// so it stays still while you move between pages.
 export const OCEAN_BACKGROUND =
   "bg-[#01275e] bg-[radial-gradient(ellipse_at_70%_55%,#013b7f_0%,#01275e_55%,#011c47_100%)]";
 
@@ -11,21 +11,13 @@ export const OCEAN_BACKGROUND =
 export const GLASS_PANEL =
   "rounded-2xl border border-white/15 bg-slate-950/55 shadow-xl shadow-black/30 backdrop-blur-md";
 
-type PageShellProps = {
-  // Which nav item to highlight (e.g. "/leaderboard").
-  current?: string;
-  // Sign-in / sign-up / email pages: show only the logo, so nothing distracts from the form.
-  minimal?: boolean;
-  children: ReactNode;
-};
-
-// The frame shared by the inner pages (leaderboard, sign-in, sign-up): home's background,
-// a faint world map behind everything, and the same top bar — so every page feels like one app.
-export function PageShell({ current, minimal = false, children }: PageShellProps) {
+// The frame of the inner pages (leaderboard, maps, sign-in…): a faint world map behind the content and
+// the page padding. The top bar is NOT here — it lives in the root layout and stays on screen.
+export function PageShell({ children }: { children: ReactNode }) {
   return (
-    <main className={`relative isolate flex flex-1 flex-col overflow-hidden text-white ${OCEAN_BACKGROUND}`}>
+    <main className="relative isolate flex flex-1 flex-col text-white">
       {/* Decorative, so alt="". Faded on all 4 edges so it melts into the background. */}
-      <div className="absolute inset-0 -z-10 flex items-center opacity-20">
+      <div className="absolute inset-0 -z-10 flex items-center overflow-hidden opacity-20">
         <Image
           src={worldMap}
           alt=""
@@ -35,10 +27,7 @@ export function PageShell({ current, minimal = false, children }: PageShellProps
         />
       </div>
 
-      <div className="flex flex-1 flex-col gap-8 px-5 py-5 lg:px-10">
-        <NavBar current={current} minimal={minimal} />
-        {children}
-      </div>
+      <div className="flex flex-1 flex-col px-5 pt-8 pb-5 lg:px-10">{children}</div>
     </main>
   );
 }

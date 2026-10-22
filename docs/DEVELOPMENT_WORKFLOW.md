@@ -85,3 +85,32 @@ only works from `http://localhost:3000/*` pages and a script has no web page.
 4. Add it to `.env.local` (never commit it, never add `NEXT_PUBLIC_`): `GOOGLE_MAPS_SERVER_API_KEY=...`
 5. Try a small run first: `npm run generate:locations -- --total 50 --countries IN,FR --dry-run`
    (checks everything, saves nothing). Then a real run: `npm run generate:locations`.
+
+## 10. Party (multiplayer) server
+Party mode needs a second program running next to the website. Use two terminals in `c:/KIKI/WhereOnEarth`:
+1. `npm run dev` — the website (http://localhost:3000)
+2. `npm run party` — the party server (ws://localhost:3001). It does NOT reload by itself: after changing
+   `src/party/` or `src/lib/party/`, stop it (Ctrl+C) and start it again.
+To test alone: one normal window and one **Incognito** window (different login), or a guest in each.
+
+## 11. Putting party mode online (free): website on Vercel + party server on Render
+The website stays on Vercel. The party server runs on Render's free plan (sleeps after 15 min without players;
+the first party after that waits ~1 minute while it wakes — the page shows "Connecting…" and retries by itself).
+1. **Push the code to GitHub** (both Vercel and Render build from it).
+2. **Create a secret** (same value everywhere):
+   `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`
+   It's already in `.env.local` as `PARTY_SECRET` — you can reuse that value.
+3. **Render** (https://render.com, sign up with GitHub, no card needed for free):
+   **New → Blueprint** → pick the `WhereOnEarth` repository → Render reads `render.yaml` → fill in:
+   - `MONGODB_URI` = the same value as in `.env.local`
+   - `PARTY_SECRET` = the secret from step 2
+   - `BETTER_AUTH_URL` = your website's address, e.g. `https://whereonearth.vercel.app` (no slash at the end)
+   → **Apply**. Wait for "Live", then open `https://<service>.onrender.com/health` → it must say `ok`.
+4. **MongoDB Atlas → Network Access**: Render's free servers have changing addresses. If `0.0.0.0/0` is already
+   there (needed for Vercel too), nothing to do; otherwise add Render's outbound IPs (Render → service → Connect → Outbound).
+5. **Vercel** → Project → Settings → Environment Variables (Production), then **Redeploy**:
+   - `NEXT_PUBLIC_PARTY_URL` = `wss://<service>.onrender.com`  (wss = encrypted)
+   - `PARTY_SECRET` = the same secret
+6. Test: open the Vercel site → Party → Create; open the invite link on your phone (mobile data) → join.
+Optional: a free uptime pinger (e.g. UptimeRobot) calling `https://<service>.onrender.com/health` every 10 min keeps
+it awake (one always-on free service ≈ 744 of Render's 750 free hours/month).

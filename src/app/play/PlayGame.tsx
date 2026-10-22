@@ -15,14 +15,14 @@ import { ExitGameButton } from "./ExitGameButton";
 import { MapSwitcher, type CountryChoice } from "./MapSwitcher";
 import { GameSummary } from "./GameSummary";
 import { GLASS, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./gameStyles";
+import { useGuessMapExpansion } from "./useGuessMapExpansion";
 
 // How the guess map grows on hover: width and height together over 0.5 s with a soft ease-out curve.
 // Phones don't grow the map, so the sizes only change from `sm:` (640px wide) up.
 // The map box is always fully opaque: a see-through map makes the browser blend two live 3D scenes
 // (map + Street View) on every frame, which makes panning stutter.
+// When it grows or shrinks is decided by useGuessMapExpansion.
 const GROW_MOTION = "transition-[width,height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
-// Shrinking waits a moment, so slipping the mouse off for a split second doesn't snap the map closed.
-const SHRINK_DELAY_MS = 300;
 
 // Reads `{ error }` from a failed API response, with a fallback message.
 async function readError(response: Response): Promise<string> {
@@ -71,24 +71,9 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
   // End screen: the round the map is zoomed on (null = all rounds).
   const [focusedRound, setFocusedRound] = useState<number | null>(null);
 
-  // Guess map grow/shrink: grows at once on hover or focus, shrinks after SHRINK_DELAY_MS.
-  const [mapExpanded, setMapExpanded] = useState(false);
-  const shrinkTimerRef = useRef<number | null>(null);
-  function growMap() {
-    if (shrinkTimerRef.current !== null) window.clearTimeout(shrinkTimerRef.current);
-    shrinkTimerRef.current = null;
-    setMapExpanded(true);
-  }
-  function shrinkMapSoon() {
-    if (shrinkTimerRef.current !== null) window.clearTimeout(shrinkTimerRef.current);
-    shrinkTimerRef.current = window.setTimeout(() => setMapExpanded(false), SHRINK_DELAY_MS);
-  }
-  const growHandlers = {
-    onPointerEnter: growMap,
-    onPointerLeave: shrinkMapSoon,
-    onFocusCapture: growMap,
-    onBlurCapture: shrinkMapSoon,
-  };
+  // The guess map box and the Guess button: the map grows while the mouse is over either of them.
+  const mapBoxRef = useRef<HTMLElement>(null);
+  const guessButtonRef = useRef<HTMLDivElement>(null);
 
   const startGame = useCallback(async () => {
     setBusy(true);
@@ -155,6 +140,8 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
   }
 
   const isFinished = game !== null && game.currentPanorama === null;
+  const guessing = Boolean(game?.currentPanorama) && result === null;
+  const mapExpanded = useGuessMapExpansion(guessing, mapBoxRef, guessButtonRef);
   const roundLabel = result
     ? `Round ${result.roundNumber} / ${game?.totalRounds ?? 5}`
     : game?.currentRound
@@ -230,7 +217,7 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
       <section
         aria-label={mapView.mode === "guess" ? "Guess map: click to place your pin" : "Map"}
         className={`absolute overflow-hidden ${mapBox}`}
-        {...(mapView.mode === "guess" ? growHandlers : {})}
+        ref={mapBoxRef}
       >
         <GoogleGameMap view={mapView} />
       </section>
@@ -238,8 +225,8 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
       {/* ---------- Guessing: the Guess button under the map (same width, grows with it) ---------- */}
       {mapView.mode === "guess" && (
         <div
+          ref={guessButtonRef}
           className={`absolute right-16 bottom-10 left-3 z-10 sm:left-auto ${GROW_MOTION} ${mapExpanded ? "sm:w-[36rem]" : "sm:w-80"}`}
-          {...growHandlers}
         >
           <button type="button" onClick={submitGuess} disabled={!guess || busy} className={`${PRIMARY_BUTTON} w-full`}>
             <MapPin aria-hidden="true" className="size-5" />

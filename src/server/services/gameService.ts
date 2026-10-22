@@ -38,36 +38,47 @@ async function recentLocationIds({ userId, guestId }: GameOwner): Promise<Types.
 }
 
 function sampleLocations(map: GameMap, excludeIds: Types.ObjectId[]) {
-  // Country map → that country; continent map → that continent; World → every location.
-  const onMap = map.countryCode
-    ? { countryCode: map.countryCode }
-    : map.continent
-      ? { continent: map.continent }
-      : {};
+  // Famous places → the landmarks; a country map → that country; a continent → that continent.
+  const onMap = map.featured
+    ? { featured: true }
+    : map.countryCode
+      ? { countryCode: map.countryCode }
+      : map.continent
+        ? { continent: map.continent }
+        : {};
   return LocationModel.aggregate<SampledLocation>([
     { $match: { ...onMap, _id: { $nin: excludeIds } } },
     { $sample: { size: CANDIDATES } },
   ]);
 }
 
-// Starts a new game on the chosen map: 5 random locations, each in a different country when
-// possible, skipping locations this player saw in their recent games.
-// `map` is already checked by the caller (resolveMap in mapService); it defaults to World.
-export async function createGame(owner: GameOwner, map: GameMap = findMap(DEFAULT_MAP_ID)!) {
+// `count` random locations on a map (5 for single player; parties choose 3–10), each in a different
+// country when possible, avoiding `excludeIds` (falls back to allowing them if too few are left).
+export async function pickGameLocations(
+  map: GameMap,
+  excludeIds: Types.ObjectId[] = [],
+  count: number = ROUNDS_PER_GAME,
+) {
   await connectToDatabase();
 
-  let candidates = await sampleLocations(map, await recentLocationIds(owner));
+  let candidates = await sampleLocations(map, excludeIds);
   // A heavy player may have seen almost the whole map: then allow repeats rather than fail.
-  if (candidates.length < ROUNDS_PER_GAME) {
+  if (candidates.length < count && excludeIds.length > 0) {
     candidates = await sampleLocations(map, []);
   }
 
-  const locations = pickRounds(candidates, ROUNDS_PER_GAME);
-  if (locations.length < ROUNDS_PER_GAME) {
-    throw new Error(
-      `Not enough locations on map "${map.id}": need ${ROUNDS_PER_GAME}, found ${locations.length}.`,
-    );
+  const locations = pickRounds(candidates, count);
+  if (locations.length < count) {
+    throw new Error(`Not enough locations on map "${map.id}": need ${count}, found ${locations.length}.`);
   }
+  return locations;
+}
+
+// Starts a new game on the chosen map, skipping locations this player saw in their recent games.
+// `map` is already checked by the caller (resolveMap in mapService); it defaults to World.
+export async function createGame(owner: GameOwner, map: GameMap = findMap(DEFAULT_MAP_ID)!) {
+  await connectToDatabase();
+  const locations = await pickGameLocations(map, await recentLocationIds(owner));
 
   // Build one round per location and save the game.
   return GameModel.create({

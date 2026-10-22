@@ -20,13 +20,19 @@ export type GameMap = {
   // A continent map uses `continent`, a country map uses `countryCode` ("FR"); World uses neither.
   continent: Continent | null;
   countryCode: string | null;
+  // The Famous places map: only hand-picked landmark locations (Location.featured).
+  featured: boolean;
 };
 
 export const DEFAULT_MAP_ID = "world";
 
+// A brand-new player's first game: a warm-up on world-famous landmarks (like WorldGuessr's onboarding).
+export const FAMOUS_MAP_ID = "famous";
+export const FIRST_GAME_URL = `/play?map=${FAMOUS_MAP_ID}`;
+
 // The fixed maps: World + one per continent. Country maps are built from the database instead
 // (any country with enough locations — see MIN_COUNTRY_MAP_LOCATIONS), so they grow with the pool.
-const FIXED_MAPS: Omit<GameMap, "countryCode">[] = [
+const FIXED_MAPS: Omit<GameMap, "countryCode" | "featured">[] = [
   {
     id: DEFAULT_MAP_ID,
     name: "World",
@@ -51,7 +57,21 @@ const FIXED_MAPS: Omit<GameMap, "countryCode">[] = [
   { id: "oceania", name: "Oceania", description: "Australia, New Zealand and the Pacific.", continent: "oceania" },
 ];
 
-export const MAPS: GameMap[] = FIXED_MAPS.map((map) => ({ ...map, countryCode: null }));
+const FAMOUS_MAP: GameMap = {
+  id: FAMOUS_MAP_ID,
+  name: "Famous places",
+  description: "World-famous landmarks. The perfect first game.",
+  continent: null,
+  countryCode: null,
+  featured: true,
+};
+
+// World first, then Famous places, then the continents.
+export const MAPS: GameMap[] = [
+  ...FIXED_MAPS.slice(0, 1),
+  FAMOUS_MAP,
+  ...FIXED_MAPS.slice(1),
+].map((map) => ({ countryCode: null, featured: false, ...map }));
 
 // A country needs this many locations to get its own map, so games don't repeat the same few spots.
 export const MIN_COUNTRY_MAP_LOCATIONS = 20;
@@ -72,6 +92,7 @@ export function countryMap(code: string, name: string): GameMap {
     description: `Every round somewhere in ${name}.`,
     continent: null,
     countryCode: code.toUpperCase(),
+    featured: false,
   };
 }
 

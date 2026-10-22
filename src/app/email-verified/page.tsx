@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { CircleCheck, CircleX } from "lucide-react";
 import { PRIMARY_BUTTON } from "@/components/formStyles";
+import { FIRST_GAME_URL } from "@/lib/maps/catalog";
 import { GLASS_PANEL, PageShell } from "@/components/PageShell";
 
 export const metadata: Metadata = {
@@ -43,9 +44,15 @@ async function VerificationResult({ searchParams }: PageProps) {
     <>
       <CircleCheck aria-hidden="true" className="size-14 text-emerald-300" />
       <h1 className="text-3xl font-bold">Email verified!</h1>
-      <p className="text-white/70">Your account is ready and you&apos;re signed in.</p>
-      <Link href="/play" className={PRIMARY_BUTTON}>
-        Start playing
+      <p className="text-white/70">
+        Your account is ready and you&apos;re signed in. Warm up with a first game of world-famous
+        landmarks — can you place them all?
+      </p>
+      <Link href={FIRST_GAME_URL} className={PRIMARY_BUTTON}>
+        Play your first game
+      </Link>
+      <Link href="/" className="text-sm text-white/70 underline-offset-4 hover:text-white hover:underline">
+        Skip for now
       </Link>
     </>
   );
@@ -54,7 +61,7 @@ async function VerificationResult({ searchParams }: PageProps) {
 // /email-verified — the result of clicking the verification link.
 export default function EmailVerifiedPage({ searchParams }: PageProps) {
   return (
-    <PageShell minimal>
+    <PageShell>
       <div className="grid flex-1 place-items-center pb-8">
         <section
           className={`flex w-full max-w-md flex-col items-center gap-4 p-6 text-center sm:p-8 ${GLASS_PANEL}`}

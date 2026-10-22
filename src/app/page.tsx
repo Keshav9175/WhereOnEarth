@@ -1,16 +1,13 @@
 import Image from "next/image";
 import { CompassRose } from "@/components/home/CompassRose";
 import { GameModeCards } from "@/components/home/GameModeCards";
-import { NavBar } from "@/components/NavBar";
 import worldMap from "../../public/Vibrant Cartoon World Map Ocean Background.png";
 
-// The home screen ( / ): top nav bar, then all game-mode cards on the left and the cartoon
-// world map on the right. Only Singleplayer is playable today.
+// The home screen ( / ): the game-mode cards on the left and the cartoon world map on the right.
+// The top bar and the ocean background come from the root layout. Only Singleplayer is playable today.
 export default function HomePage() {
   return (
-    // Background = a radial glow using the map image's own ocean colours (lighter #013b7f in the
-    // middle, #01275e at its edges), so the faded map edges melt into it.
-    <main className="relative isolate flex flex-1 flex-col overflow-hidden bg-[#01275e] bg-[radial-gradient(ellipse_at_70%_55%,#013b7f_0%,#01275e_55%,#011c47_100%)] text-white">
+    <main className="relative isolate flex flex-1 flex-col text-white">
       {/* World map. Decorative, so alt="" (screen readers skip it).
           Large screens: a big map on the right that slides softly under the cards.
           Small screens: a faint background.
@@ -28,9 +25,7 @@ export default function HomePage() {
         />
       </div>
 
-      <div className="flex flex-1 flex-col gap-6 px-5 py-5 lg:px-10">
-        <NavBar current="/" />
-
+      <div className="flex flex-1 flex-col px-5 pt-6 pb-5 lg:px-10">
         <div className="flex w-full max-w-sm flex-1 flex-col justify-center">
           {/* Invisible heading: screen readers announce the page by its <h1>. */}
           <h1 className="sr-only">WhereOnEarth — choose a game mode</h1>

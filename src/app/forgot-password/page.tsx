@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 // /forgot-password — ask for a reset link by email.
 export default function ForgotPasswordPage() {
   return (
-    <PageShell minimal>
+    <PageShell>
       <AuthCard
         title="Forgot your password?"
         subtitle="Enter your email and we'll send you a link to choose a new one."

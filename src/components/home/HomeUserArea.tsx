@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { SignOutButton } from "@/components/SignOutButton";
+import { PRIMARY_FILL } from "@/components/formStyles";
 import { getPlayerStats } from "@/server/services/playerService";
 import { getSignedInUser } from "@/server/session";
 
-// Right side of the home nav bar: the signed-in player (initial, name, best score, sign out),
+// Right side of the nav bar: the signed-in player (initial, name, best score — a link to /profile,
+// where "Sign out" lives),
 // or sign-in links for guests. Server component — wrap in <Suspense> (it reads the session cookie).
 export async function HomeUserArea() {
   const user = await getSignedInUser();
@@ -19,7 +20,7 @@ export async function HomeUserArea() {
         </Link>
         <Link
           href="/sign-up"
-          className="rounded-full bg-amber-400 px-4 py-2 font-semibold text-slate-950 hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-white"
+          className={`rounded-full px-4 py-2 font-semibold ${PRIMARY_FILL} focus-visible:outline-2 focus-visible:outline-white`}
         >
           Create account
         </Link>
@@ -50,7 +51,6 @@ export async function HomeUserArea() {
           </span>
         </span>
       </Link>
-      <SignOutButton className="size-10 text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-amber-300" />
     </div>
   );
 }

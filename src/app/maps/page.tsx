@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 // /maps — the map library: pick where your next game takes place.
 export default function MapsPage() {
   return (
-    <PageShell current="/maps">
+    <PageShell>
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-8">
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Where do you want to play?</h1>

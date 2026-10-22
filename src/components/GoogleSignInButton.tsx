@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { signIn } from "@/lib/auth-client";
+import { FIRST_GAME_URL } from "@/lib/maps/catalog";
 import { ERROR_TEXT } from "./formStyles";
 
 type GoogleSignInButtonProps = {
-  // Where to send the player after Google signs them in.
+  // Where to send a returning player after Google signs them in (home by default).
   callbackURL?: string;
 };
 
-export function GoogleSignInButton({ callbackURL = "/play" }: GoogleSignInButtonProps) {
+// A first-time Google player (Better Auth creates their account here) goes straight into their
+// first game instead (newUserCallbackURL).
+export function GoogleSignInButton({ callbackURL = "/" }: GoogleSignInButtonProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,7 +20,11 @@ export function GoogleSignInButton({ callbackURL = "/play" }: GoogleSignInButton
     setBusy(true);
     setError(null);
     try {
-      const result = await signIn.social({ provider: "google", callbackURL });
+      const result = await signIn.social({
+        provider: "google",
+        callbackURL,
+        newUserCallbackURL: FIRST_GAME_URL,
+      });
       if (result.error) {
         setError(result.error.message ?? "Could not start Google sign-in.");
         setBusy(false);

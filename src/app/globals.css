@@ -39,8 +39,61 @@
   --color-error: var(--error);
 }
 
+/* The page background (navy ocean gradient) is set on <body> in src/app/layout.tsx, so it stays still
+   while pages change. (No background here: this plain rule would override that Tailwind class.) */
+html {
+  background: #011c47;
+  /* Always keep room for the scrollbar. Without this, long pages (Map) get a scrollbar and short ones
+     (Leaderboard) don't, so the whole page — top bar included — jumped ~15px sideways on every switch. */
+  scrollbar-gutter: stable;
+}
+
 body {
-  background: var(--bg);
   color: var(--fg);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Page-to-page transitions (src/components/PageTransition.tsx). The old page fades out where it is; the
+   new page fades in with a tiny 6px rise. Nothing is stretched or resized (a tall page and a short page
+   are never "morphed" into each other). */
+@keyframes page-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+::view-transition-old(.page-exit) {
+  animation: page-fade-out 150ms ease-out both;
+}
+::view-transition-new(.page-enter) {
+  animation: page-fade-in 260ms cubic-bezier(0.22, 1, 0.36, 1) 60ms both;
+}
+/* Behind the pages: the ocean background, identical before and after, so no animation at all. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* People who ask their system for less motion get instant page changes. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* The top bar (NavBar, view-transition-name "site-header") is never faded: only its live, current
+   version is shown during a page change, so its blue highlight can slide without a ghost copy. */
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-group(site-header),
+::view-transition-new(site-header) {
+  animation: none;
 }

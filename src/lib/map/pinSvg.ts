@@ -50,6 +50,15 @@ const number = (n: number) =>
 export const GUESS_PIN_SVG = pinSvg(GUESS, DOT);
 export const ANSWER_PIN_SVG = pinSvg(ANSWER, FLAG);
 
+// Party games: one pin per player, in that player's colour, with their initial.
+export function playerPinSvg(color: string, initial: string, id: string) {
+  const safe = initial.replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1).toUpperCase() || "?";
+  return pinSvg(
+    { id: `player-${id}`, light: color, base: color, dark: "#0f172a" },
+    `<text x="17" y="21.5" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="800" fill="white">${safe}</text>`,
+  );
+}
+
 // Numbered pins for the end-of-game map: "3" in blue = your guess in round 3, in green = the answer.
 export const numberedGuessPinSvg = (round: number) => pinSvg(GUESS, number(round));
 export const numberedAnswerPinSvg = (round: number) => pinSvg(ANSWER, number(round));
