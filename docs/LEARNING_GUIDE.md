@@ -382,3 +382,88 @@ tells Tailwind about them, so `bg-primary` automatically follows light/dark mode
 ### Preflight (reset)
 Tailwind resets browser defaults: headings and lists lose their default size and bullets. So we add them
 back explicitly (e.g. `text-2xl font-bold` on `<h2>`, `list-decimal pl-6` on `<ol>`).
+
+## The random location engine (D-019)
+
+### Pre-built pool vs. random at game time
+Picking a random point *when the game starts* usually lands in the sea or a desert with no Street View. So, like
+WorldGuessr, we do the slow searching **once, ahead of time** with a script, save thousands of good spots, and the
+game just picks from that list (fast, and always valid).
+
+### GeoJSON, polygons and holes
+Country borders are stored as **GeoJSON**: outlines made of `[longitude, latitude]` points (longitude first!).
+A **polygon** = an outer outline plus optional **holes** (Lesotho is a hole inside South Africa). A country with
+islands is a **MultiPolygon** (many polygons).
+
+### Point in polygon ("ray casting")
+To know if a point is inside an outline, imagine a line going right from the point and count the borders it
+crosses: odd = inside, even = outside. Inside the outer ring and *not* inside a hole = in the country.
+
+### Rejection sampling ("throwing darts")
+For a random point inside a weird shape: pick a random point in the shape's rectangle; if it's not on the land,
+throw again. Simple and perfectly uniform.
+
+### Weighting by √area
+Pure area weighting would give Russia 560× more spots than Belgium — the game would feel like "always Russia".
+The square root (√) keeps big countries bigger but lets small ones appear. Every country also gets a minimum.
+
+### Spatial grid
+To check "is a new spot within 1 km of any of 5,000 saved spots?" quickly, space is cut into 1 km cubes; only the
+same cube and its 26 neighbours need checking, not all 5,000 points.
+
+### Two kinds of Google key
+The **browser key** (`NEXT_PUBLIC_…`) is public, so it's locked to our website address. The **server key** is
+secret (no `NEXT_PUBLIC_`), only lives in `.env.local`, and is locked to one API instead.
+
+## Email verification (D-021)
+
+### Why verify emails?
+Anyone can type any address into a sign-up form. Verifying proves the person can read that inbox, so
+accounts belong to real addresses (and later, password reset emails go to the right person).
+
+### How the link works
+Better Auth creates a **signed token**: a short code that contains the email address and an expiry time, stamped
+with our `BETTER_AUTH_SECRET`. Nobody can fake or change it without the secret. Clicking the link sends the
+token back to `/api/auth/verify-email`; if the stamp and time are valid, the user is marked `emailVerified: true`.
+
+### SMTP, Nodemailer and App Passwords
+**SMTP** is the standard way programs hand an email to a mail server. **Nodemailer** is the Node.js library that
+speaks SMTP. Gmail won't let a program log in with your normal password, so we use an **App Password**: a separate
+16-letter password that only works for apps, can be deleted anytime, and needs 2-Step Verification switched on.
+
+### Not leaking information
+Sign-up gives the same answer whether or not the email already has an account, and the "resend" only happens
+after a correct password. Both stop strangers from learning who plays, or flooding someone's inbox.
+
+### Avoiding repeats (D-020)
+The database already records which location every round used (`locationId`). To start a game we load the location
+IDs of the player's last 100 games and tell MongoDB "pick random locations **not in** this list" (`$nin`).
+Then `pickRounds` takes one location per country so a game feels like a world tour.
+
+### Anonymous cookies
+A guest has no account, so the server gives their browser a random ID in a **cookie** (a small value the browser
+sends back with every request). **httpOnly** means page JavaScript can't read it; **sameSite: lax** means other
+websites can't make the browser send it in hidden requests. It identifies a browser, not a person.
+
+## Protected pages (/profile)
+
+A **protected page** is one only signed-in players may see. The check must happen on the **server**: hiding a link
+in the browser does nothing, because anyone can type `/profile` into the address bar. `PlayerProfile` reads the
+session cookie on the server and calls `redirect("/sign-in")` for guests. Because it sits inside `<Suspense>`, the page
+has already started streaming, so Next.js sends the redirect as a small instruction in the page instead of an HTTP 307 —
+the browser still ends up on `/sign-in`.
+
+## Maps (D-022)
+
+### A map is a filter, not a copy
+We don't copy locations into a "Europe" list. Every location carries a `continent` tag, and a Europe game simply
+asks MongoDB for random locations **where `continent` is `"europe"`**. The World map asks with no filter at all.
+An **index** on `continent` lets MongoDB jump straight to those locations instead of reading all 2,500.
+
+### Backfilling
+When a new field is added, old records don't have it yet. A **backfill** is a one-time script that fills it in
+(`npm run backfill:continents`). It is written to be safe to run twice: it only sets values, never deletes.
+
+### Hot reload keeps old models
+Mongoose models are created once and reused. After changing a schema, the running dev server can keep using the
+old one (our new `mapId` field was silently dropped) until `npm run dev` is restarted.

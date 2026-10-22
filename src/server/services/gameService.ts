@@ -1,6 +1,8 @@
 import { isObjectIdOrHexString, type Types } from "mongoose";
 import { haversineDistanceKm } from "@/lib/game/distance";
+import { pickRounds } from "@/lib/game/pickRounds";
 import { calculateScore } from "@/lib/game/scoring";
+import { DEFAULT_MAP_ID, findMap, type GameMap } from "@/lib/maps/catalog";
 import type { GuessInput } from "@/lib/validation/guess";
 import { connectToDatabase } from "@/server/db";
 import { GameModel, ROUNDS_PER_GAME } from "@/server/models/Game";
@@ -14,25 +16,64 @@ type SampledLocation = {
   country: string;
 };
 
-// Starts a new game: picks random locations and saves a game with one round per location.
-// `userId` is the signed-in player, or null for a guest.
-export async function createGame(userId: string | null) {
+// Who is starting the game: a signed-in player (userId) or a guest browser (guestId).
+export type GameOwner = { userId: string | null; guestId: string | null };
+
+// How many of the player's latest games count as "recent" (100 games = 500 locations not repeated).
+const RECENT_GAMES = 100;
+// How many random locations we fetch to choose 5 rounds from different countries.
+const CANDIDATES = 40;
+
+// The locations this player (or guest browser) saw in their recent games.
+async function recentLocationIds({ userId, guestId }: GameOwner): Promise<Types.ObjectId[]> {
+  const filter = userId ? { userId } : guestId ? { guestId } : null;
+  if (!filter) return [];
+
+  // Only the location IDs are loaded (not whole games), so we tell TypeScript that shape.
+  const games = await GameModel.find(filter, { "rounds.locationId": 1 })
+    .sort({ createdAt: -1 })
+    .limit(RECENT_GAMES)
+    .lean<{ rounds: { locationId: Types.ObjectId }[] }[]>();
+  return games.flatMap((game) => game.rounds.map((round) => round.locationId));
+}
+
+function sampleLocations(map: GameMap, excludeIds: Types.ObjectId[]) {
+  // Country map → that country; continent map → that continent; World → every location.
+  const onMap = map.countryCode
+    ? { countryCode: map.countryCode }
+    : map.continent
+      ? { continent: map.continent }
+      : {};
+  return LocationModel.aggregate<SampledLocation>([
+    { $match: { ...onMap, _id: { $nin: excludeIds } } },
+    { $sample: { size: CANDIDATES } },
+  ]);
+}
+
+// Starts a new game on the chosen map: 5 random locations, each in a different country when
+// possible, skipping locations this player saw in their recent games.
+// `map` is already checked by the caller (resolveMap in mapService); it defaults to World.
+export async function createGame(owner: GameOwner, map: GameMap = findMap(DEFAULT_MAP_ID)!) {
   await connectToDatabase();
 
-  // Ask MongoDB for ROUNDS_PER_GAME (5) random locations.
-  const locations = await LocationModel.aggregate<SampledLocation>([
-    { $sample: { size: ROUNDS_PER_GAME } },
-  ]);
+  let candidates = await sampleLocations(map, await recentLocationIds(owner));
+  // A heavy player may have seen almost the whole map: then allow repeats rather than fail.
+  if (candidates.length < ROUNDS_PER_GAME) {
+    candidates = await sampleLocations(map, []);
+  }
 
+  const locations = pickRounds(candidates, ROUNDS_PER_GAME);
   if (locations.length < ROUNDS_PER_GAME) {
     throw new Error(
-      `Not enough locations: need ${ROUNDS_PER_GAME}, found ${locations.length}. Run "npm run seed".`,
+      `Not enough locations on map "${map.id}": need ${ROUNDS_PER_GAME}, found ${locations.length}.`,
     );
   }
 
   // Build one round per location and save the game.
   return GameModel.create({
-    userId,
+    mapId: map.id,
+    userId: owner.userId,
+    guestId: owner.userId ? null : owner.guestId,
     rounds: locations.map((location) => ({
       locationId: location._id,
       answer: { lat: location.lat, lng: location.lng },

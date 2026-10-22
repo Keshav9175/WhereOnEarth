@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "@/lib/auth-client";
+import { ERROR_TEXT } from "./formStyles";
 
 type GoogleSignInButtonProps = {
   // Where to send the player after Google signs them in.
@@ -33,7 +34,7 @@ export function GoogleSignInButton({ callbackURL = "/play" }: GoogleSignInButton
         type="button"
         onClick={handleClick}
         disabled={busy}
-        className="flex cursor-pointer items-center justify-center gap-3 rounded-lg border border-border bg-card px-5 py-2.5 text-base font-semibold text-fg hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-primary"
+        className="flex cursor-pointer items-center justify-center gap-3 rounded-xl bg-white px-5 py-3 text-base font-semibold text-slate-900 shadow-lg shadow-black/20 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
       >
         <svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48">
           <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z" />
@@ -44,7 +45,7 @@ export function GoogleSignInButton({ callbackURL = "/play" }: GoogleSignInButton
         {busy ? "Opening Google…" : "Continue with Google"}
       </button>
       {error && (
-        <p className="text-error" role="alert">
+        <p className={ERROR_TEXT} role="alert">
           {error}
         </p>
       )}

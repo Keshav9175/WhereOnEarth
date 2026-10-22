@@ -2,19 +2,13 @@
 
 import "leaflet/dist/leaflet.css";
 import { useEffect } from "react";
-import {
-  CircleMarker,
-  MapContainer,
-  Polyline,
-  TileLayer,
-  useMap,
-  useMapEvents,
-} from "react-leaflet";
-import { MAP_TILE_ATTRIBUTION, MAP_TILE_URL } from "@/lib/map/tiles";
+import { MapContainer, Marker, Polyline, useMap, useMapEvents } from "react-leaflet";
+import { GameBaseMap } from "./GameBaseMap";
+import { ANSWER_PIN, GUESS_PIN } from "./mapPins";
 import type { Coordinates } from "@/types/geo";
 
-// Shared by the map and its loading placeholder (GuessMapLoader), so both have the same size.
-export const MAP_BOX_CLASSES = "h-full min-h-70 w-full rounded-xl";
+// Default size/shape. Callers can pass their own `className` (e.g. a full-screen result map).
+const DEFAULT_MAP_CLASSES = "h-full min-h-70 w-full rounded-xl";
 
 type GuessMapProps = {
   // Where the player's marker is (null = not placed yet).
@@ -23,7 +17,21 @@ type GuessMapProps = {
   onGuessChange?: (guess: Coordinates) => void;
   // The true location, shown only after the round is scored.
   answer?: Coordinates | null;
+  // Size/shape classes for the map box (defaults to DEFAULT_MAP_CLASSES).
+  className?: string;
 };
+
+// Leaflet only notices WINDOW resizes. When the map's own box changes size (e.g. the guess map
+// growing on hover), tell Leaflet to re-measure, or it shows grey gaps where tiles are missing.
+function ResizeWatcher() {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
 
 // Listens for clicks and reports them as a guess.
 function ClickToGuess({ onGuessChange }: { onGuessChange: (guess: Coordinates) => void }) {
@@ -51,7 +59,8 @@ function FitResult({ guess, answer }: { guess: Coordinates; answer: Coordinates 
         [guessLat, guessLng],
         [answerLat, answerLng],
       ],
-      { padding: [40, 40], maxZoom: 6 },
+      // Extra room at the top (game top bar) and bottom (result card), so neither pin hides behind them.
+      { paddingTopLeft: [50, 100], paddingBottomRight: [50, 320], maxZoom: 6 },
     );
   }, [map, guessLat, guessLng, answerLat, answerLng]);
   return null;
@@ -60,41 +69,56 @@ function FitResult({ guess, answer }: { guess: Coordinates; answer: Coordinates 
 // The world map where the player clicks to place a guess (Leaflet + OpenStreetMap-style tiles).
 // Leaflet needs the browser's `window`, so this component must never render on the server —
 // it is loaded with `next/dynamic` and `ssr: false` (see GuessMapLoader).
-export default function GuessMap({ guess, onGuessChange, answer = null }: GuessMapProps) {
+export default function GuessMap({
+  guess,
+  onGuessChange,
+  answer = null,
+  className = DEFAULT_MAP_CLASSES,
+}: GuessMapProps) {
   return (
     <MapContainer
-      className={`${MAP_BOX_CLASSES} cursor-crosshair`}
+      className={`${className} ${onGuessChange ? "cursor-crosshair" : ""}`}
       center={[20, 0]}
       zoom={1}
       minZoom={1}
       worldCopyJump
       aria-label="World map: click to place your guess"
     >
-      <TileLayer url={MAP_TILE_URL} attribution={MAP_TILE_ATTRIBUTION} />
+      <GameBaseMap />
+      <ResizeWatcher />
 
       {onGuessChange && <ClickToGuess onGuessChange={onGuessChange} />}
 
+      {/* The dashed line is drawn first so the pins sit on top of it. */}
+      {guess && answer && (
+        <Polyline
+          positions={[
+            [guess.lat, guess.lng],
+            [answer.lat, answer.lng],
+          ]}
+          pathOptions={{ color: "#1e293b", weight: 3, dashArray: "8 8", opacity: 0.8 }}
+        />
+      )}
+
       {guess && (
-        <CircleMarker
-          center={[guess.lat, guess.lng]}
-          radius={8}
-          pathOptions={{ color: "#1d4ed8", fillColor: "#3b82f6", fillOpacity: 0.9 }}
+        <Marker
+          position={[guess.lat, guess.lng]}
+          icon={GUESS_PIN}
+          title="Your guess"
+          keyboard={false}
+          interactive={false}
         />
       )}
 
       {guess && answer && (
         <>
-          <CircleMarker
-            center={[answer.lat, answer.lng]}
-            radius={8}
-            pathOptions={{ color: "#15803d", fillColor: "#22c55e", fillOpacity: 0.9 }}
-          />
-          <Polyline
-            positions={[
-              [guess.lat, guess.lng],
-              [answer.lat, answer.lng],
-            ]}
-            pathOptions={{ color: "#111827", weight: 2, dashArray: "6 6" }}
+          <Marker
+            position={[answer.lat, answer.lng]}
+            icon={ANSWER_PIN}
+            title="The real location"
+            keyboard={false}
+            interactive={false}
+            zIndexOffset={1000}
           />
           <FitResult guess={guess} answer={answer} />
         </>

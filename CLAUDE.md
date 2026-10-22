@@ -67,13 +67,12 @@ Use this structure for every step that produces code or configuration:
 Explain the *reasoning* behind architecture choices and trade-offs, using examples from this
 game. Keep steps small.
 
-**Who writes the code (updated 2026-10-20, latest).** The owner writes the code again — **especially
-frontend**. Claude gives each file in chat (exact path, complete code, line-by-line teaching), one small
-file at a time, then waits for the owner's result before the next. Claude does not create or edit app code
-unless the owner explicitly asks for that specific change; read-only checks (tsc, tests, viewing files) and
-`docs/` updates are fine. (History: Phases 1–5 owner-written; Phase 6 backend, Street View and the
-Leaflet map were built by Claude at the owner's request.) Always explain "what we are doing now and
-why" first, use `/` in paths, verify files are saved and in the right folder, and never commit or push unless asked.
+**Who writes the code (updated 2026-10-20, latest).** **Claude writes the code** (owner: "now you will
+write code for me"). Claude creates/edits the files, verifies them (typecheck, lint, tests, build), then
+explains what was built and why (A–H format, plain English) and gives the owner exact manual test steps.
+The owner tests and asks questions. (History: the mode has switched several times. Phases 1–5 and the
+first accounts UI were owner-written from chat; the backend, Street View, Leaflet and Tailwind were Claude-built.)
+Always explain "what we are doing now and why", use `/` in paths, and never commit or push unless asked.
 
 **Make technical decisions yourself.** The owner is a beginner and has asked not to be given
 technical choices to pick from (folder names, libraries, structure). Choose the

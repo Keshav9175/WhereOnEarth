@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { SiteHeader } from "@/components/SiteHeader";
 
 export const metadata: Metadata = {
   title: "WhereOnEarth",
@@ -13,7 +12,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       {/* Browser extensions (e.g. Grammarly) add attributes to <body> before React loads.
           This ignores attribute differences on <body> only — not its contents. */}
       <body suppressHydrationWarning className="flex min-h-screen flex-col">
-        <SiteHeader />
         {children}
       </body>
     </html>

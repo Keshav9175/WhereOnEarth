@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "ai-color-palette",
+        "value": "*",
+        "files": [
+          "src/components/home/GameModeCards.tsx"
+        ],
+        "createdAt": "2026-10-21T06:54:31.509Z",
+        "reason": "Owner's reference mockup (GeoQuest-style home) explicitly uses a purple gradient card for the ranked mode; colours follow that reference"
+      },
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "createdAt": "2026-10-21T18:24:00.231Z",
+        "reason": "Claude: HTML email in src/server/email.ts — most email clients can't load web fonts, so a system-safe font stack (Arial) is the standard choice"
+      }
+    ]
+  }
+}

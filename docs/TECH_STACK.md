@@ -44,6 +44,8 @@ Status: **Planned** = agreed, not installed · **In use** = installed and workin
 | Technology | Purpose | Phase | Status |
 |---|---|---|---|
 | **Better Auth** 1.7.11 | Email and password sign-up/sign-in, sessions (cookies), MongoDB storage (D-011). | 6 | In use |
+| **flag-icons** 7.5.0 | Country flag images (SVG, MIT) for the map library (D-022). Served from our app. | 7 | In use |
+| **Nodemailer** 10.0.16 | Sends verification emails through Gmail SMTP with an App Password (D-021). Free. | 7 | In use |
 
 ## Frontend
 
@@ -61,7 +63,7 @@ learn plain CSS first. It could be adopted later through `DECISIONS.md`.
 |---|---|---|---|
 | **Google Maps Embed API (Street View mode)** | An `<iframe>` showing an interactive panorama. | Google documents it as **no charge, unlimited requests**. It still needs a Google Cloud project with a **billing account** and an API key. | In use (D-014) |
 | **Leaflet** 1.9.4 + react-leaflet 5.0.0 | Interactive map: pan, zoom, click to place a marker, draw lines. | Free, open source, simple, and independent of Google. | In use |
-| **OSM-compatible tile provider** | Supplies the map images ("tiles") Leaflet displays. | Not chosen yet. The public `tile.openstreetmap.org` server has a usage policy for light use, so we compare providers in Phase 8. | In use (dev): tile.openstreetmap.org, configurable (D-015) |
+| **Map background: OpenFreeMap + MapLibre GL** (`maplibre-gl` 6.15.0, `@maplibre/maplibre-gl-leaflet` 0.1.4) | Draws a free vector world map (recoloured to a Google-like style, Latin-letter labels) underneath Leaflet. | Free, no key, no request limits; open source. Fallback: raster tiles (CARTO with key, else OSM). | In use (D-021) |
 | **Street View Image Metadata endpoint** | Server-side check that a panorama exists near a coordinate. | Documented as **not charged / no quota**. Used only to validate locations (D-004). | Candidate |
 
 **Billable Google products we must NOT use by accident:** Street View Static API image
@@ -76,7 +78,7 @@ Re-verify all pricing pages at the start of Phase 8.
 | Redis | Shared state across server instances, **only if needed** | 9–10 | Only if needed |
 | End-to-end testing (e.g. Playwright) | Tests the app through a real browser | 10 | Candidate |
 | GitHub | Remote backup and collaboration | 1 (optional) | Planned |
-| Deployment platform (e.g. Vercel, plus a host for any WebSocket service) | Public hosting | 10 | Candidate |
+| Deployment platform: Vercel Hobby (D-023), plus a host for the Phase 9 WebSocket service | Public hosting | 10 (pulled forward) | Chosen |
 
 ## Cost and limits (read before assuming "free")
 

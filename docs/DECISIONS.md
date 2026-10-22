@@ -115,8 +115,8 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
   and rate limiting. Email + password needs no third-party accounts.
 - **Alternatives:** Auth.js / next-auth v5 (still beta; discourages credentials login); writing auth ourselves
   (high security risk); Google/GitHub login (needs OAuth app setup, which can be added later as a Better Auth provider).
-- **Trade-offs:** no email verification or password reset yet (both need an email-sending service). Revisit before
-  launch (Phase 10).
+- **Trade-offs:** no password reset yet (it needs email sending, which now exists: D-021). Email verification was
+  added on 2026-10-21 (D-021). Password reset added 2026-10-22 (D-021).
 - **Status:** Accepted (2026-10-20).
 
 ## D-012 — Game ownership and guest play
@@ -165,6 +165,28 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
 - **Trade-offs:** long `className` strings. Repeated lists are kept in constants (e.g. `BUTTON`, `CARD` in `PlayGame.tsx`).
 - **Status:** Accepted (owner, 2026-10-20).
 
+## D-017 — Icons: lucide-react
+- **Decision:** `lucide-react` 1.61 for UI icons (home menu, shortcuts, profile card).
+- **Reasons:** free (ISC licence), the de-facto standard React icon set, tree-shaken (only imported icons ship),
+  and icons are React components with `className` sizing (works with Tailwind). It avoids hand-written SVGs.
+- **Note:** import `Map` as `MapIcon` to avoid shadowing JavaScript's built-in `Map`.
+- **Status:** Accepted (2026-10-21).
+
+## D-018 — Street View via the Maps JavaScript API (supersedes the Embed iframe part of D-014)
+- **Context:** the Embed API always shows Google's address card ("31 Champs-Élysées, Paris"), which gives the
+  answer away. The Embed API has no option to hide it, and covering it breaks the Google Maps Platform terms
+  ("may not remove, alter, or obscure Google provided attribution, links… or notices").
+- **Decision (owner: "we can't show the location name"):** `StreetViewPanorama` (client component) uses the Maps
+  JavaScript API via `@googlemaps/js-api-loader` 2.x with `addressControl: false` and `showRoadLabels: false`.
+  The nearest photo comes from `StreetViewService.getPanorama` (radius 1 km; not billed).
+- **Staying free:** "Dynamic Street View" (Pro SKU) has 5,000 free per month and is billed per panorama *created*.
+  ONE panorama per game (mounted for the whole game, `setPano()` per round, hidden during results), plus a daily
+  quota cap (~160/day) set by the owner, so it can never be billed. Our own UI never covers Google's controls or credits
+  (the top bar is centred, and the guess map is bottom-right, inset 4rem from the right edge and above the credit line).
+- **Trade-off:** needs the "Maps JavaScript API" enabled on the key (owner action). The location is still visible to a
+  determined player in browser tools (unchanged from D-014); scoring stays server-side.
+- **Status:** Accepted (2026-10-21).
+
 ## D-006 — Backend-first build order
 - **Context:** the owner wants to build the backend (models, API) before the frontend.
 - **Decision:** reorder the roadmap: logic → database/models → game API → auth → frontend →
@@ -175,3 +197,123 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
 - **Trade-offs:** no visual game for several phases, and API design happens before we see how the
   UI uses it, so small API adjustments may be needed in Phase 7.
 - **Status:** Accepted (owner, 2026-10-19).
+
+## D-019 — Random location engine: a pre-built pool from a generator script
+- **Context:** the game picked 5 of only 20 seeded big-city locations, so games repeated and felt "always cities".
+  WorldGuessr (studied as a *reference only*, cloned read-only to `c:/KIKI/worldguessr`, PolyForm Noncommercial —
+  no code or data copied) serves random picks from huge pre-built pools (`world-main.json`: 147,453 checked spots).
+- **Decision:** an offline script `npm run generate:locations` builds our own pool in MongoDB:
+  random point inside a country (Natural Earth borders, public domain, `scripts/data/countries.geojson`) →
+  Google's **official** Street View metadata check (free, no quota; `radius=1000`, `source=outdoor`, only
+  "© Google" imagery) → reject if the panorama snapped across a border or is < 1 km from an existing location →
+  save. Countries get √area-weighted targets (min 3) so small countries appear too; shapes sharing a code (Australia + its island territories) are merged; a country is abandoned after max(150, 25 × its target)
+  misses in a row (no coverage), so sparse big countries (Australia) keep trying longer. Pure logic lives in `src/lib/geo/` (tested); the Google call in
+  `src/server/services/streetViewMetadata.ts`.
+- **Not copied from WorldGuessr:** its coverage check uses Google's internal `GeoPhotoService.SingleImageSearch`
+  endpoint (not a public API) — we use the documented metadata API instead.
+- **Trade-offs:** needs a second, server-only key (`GOOGLE_MAPS_SERVER_API_KEY`, restricted to the Street View
+  Static API). Natural Earth's simplified coastlines can mark coastal roads as "sea" — such panoramas are accepted
+  for the country being probed. The daily game limit (Map loads quota) is unchanged.
+- **Next:** step 2 = pick 5 different countries per game and skip a player's recent locations; step 3 = a `map` tag.
+- **Status:** Accepted (2026-10-21).
+
+## D-021 — Email verification with Gmail + Nodemailer
+- **Decision:** email + password accounts must verify their email before they can sign in
+  (`requireEmailVerification: true` in `src/server/auth.ts`). Better Auth creates the signed link; we send it with
+  **Nodemailer 10.0.16** through the game's Gmail account using an **App Password** (`src/server/email.ts`).
+  Links last 1 hour, `autoSignInAfterVerification` signs the player in, and they land on `/email-verified`
+  (which also explains expired/invalid links). `sendOnSignIn: true` acts as "resend": a correct password on an
+  unverified account emails a fresh link. Google accounts are already verified by Google and are unaffected.
+  Without `GMAIL_USER`/`GMAIL_APP_PASSWORD`, emails are printed to the terminal (local development still works).
+- **Reasons:** free; no domain needed; Gmail's ~500 emails/day limit is far above our needs. Resending only after a
+  correct password means nobody can flood a stranger's inbox. Sign-up returns the same response for new and existing
+  emails, so it doesn't reveal who has an account.
+- **Alternatives:** Resend / SendGrid / Postmark (better deliverability, but sending to real users needs a verified
+  paid domain); our own SMTP server (too complex).
+- **Trade-offs:** Gmail-sent mail can land in spam and isn't meant for large volumes; switch to a transactional email
+  service with our own domain before a public launch. Users created before this change have `emailVerified: false`
+  and get a link the next time they sign in.
+- **Status:** Accepted (2026-10-21).
+
+## D-020 — Round picking: different countries, no recent repeats, anonymous guest cookie
+- **Context:** step 2 of the location engine (D-019). WorldGuessr's `repeatGuard` remembers each player's last
+  5,000 spots (in localStorage for the web). We keep that memory on the server instead.
+- **Decision:** `createGame` samples 40 random candidates excluding the locations of the player's last 100 games,
+  then `pickRounds` (pure, tested) keeps the first one from each new country → 5 different countries when possible.
+  If too few candidates remain (a player who has seen almost everything), it samples again without the exclusion.
+  Signed-in players are matched by `userId`; guests get an anonymous random ID in an httpOnly cookie `woe_guest`
+  (1 year, `sameSite: lax`), stored on their games as `guestId` (partial index). It is never sent in game data.
+- **Why server-side:** answers never reach the browser before guessing (CLAUDE.md §7), so the browser can't know
+  which spots it has seen; the database already has every round's `locationId`.
+- **Trade-offs:** clearing cookies or switching browsers resets a guest's history (harmless — only repeats).
+  Guest games are still open to anyone with the game link (unchanged access rule).
+- **Status:** Accepted (2026-10-21).
+
+## D-021 — Guess map background: OpenFreeMap vector map via MapLibre (Google-like style)
+- **Context:** the owner wants the bright "Google Maps" look other geography games use (blue sea, green land,
+  English names). WorldGuessr gets it from Google's internal tile server `mt{s}.google.com/vt` (not a public API —
+  not copied). Google's official map would share the "Map loads per day" quota with Street View (~80 games/day).
+  CARTO Voyager (free key) was tried first but is pastel and labels some places in local scripts.
+- **Decision (owner approved the 2 packages):** `maplibre-gl` 6.15.0 (BSD-3) draws OpenFreeMap's free vector map
+  (no key, no request limits, attribution added automatically) underneath Leaflet via
+  `@maplibre/maplibre-gl-leaflet` 0.1.4 (ISC). Clicks, pins, lines and zoom code are unchanged. `toGameStyle`
+  (pure, tested) recolours the "Liberty" style and shows labels in Latin letters only. If OpenFreeMap is
+  unreachable, `GameBaseMap` falls back to raster tiles (`src/lib/map/tiles.ts`: CARTO with key, else OSM).
+- **Worker file:** MapLibre draws in a background worker that Next.js doesn't serve after bundling ("Worker failed to load" →
+  white map). `scripts/copy-maplibre-worker.mjs` (postinstall + prebuild) copies it to `public/maplibre/` (git-ignored,
+  lint-ignored) and `setWorkerUrl()` points MapLibre there. Liberty's `natural_earth` picture layer is shown stronger
+  (opacity 0.85→0.35) for green/beige land like the reference.
+- **Trade-offs:** larger browser download (~200 KB gzipped, only on map screens); WebGL needed (all modern browsers).
+  `npm audit` shows 5 high issues in `braces` via `eslint-config-next` (dev-only, pre-existing) — revisit in Phase 10.
+- **Status:** Accepted (2026-10-22).
+
+## D-022 — Maps: World + one per continent, chosen when a game starts
+- **Decision:** a "map" is a named slice of the location pool. The catalogue lives in code
+  (`src/lib/maps/catalog.ts`): World (default, every location) + Europe, Asia, Africa, North America,
+  South America, Oceania. Each location stores `continent` (from Natural Earth's `CONTINENT`, same borders file
+  as D-019; open-ocean island nations get `null` = World only). Games store `mapId`. `POST /api/games` takes an
+  optional body `{ "map": "<id>" }` validated with Zod (unknown map, broken JSON or extra fields → 400).
+  Existing locations were filled once with `npm run backfill:continents`; the generator now saves `continent`.
+- **Reasons:** maps change rarely and both the server and the screens need the list, so a typed constant is simpler
+  than a database collection. Continents need no new data source.
+- **Alternatives:** a `maps` collection with hand-picked location lists (needed later for custom/community maps);
+  country maps (many have too few locations today).
+- **UI (2026-10-22):** `/maps` (navbar "Map") shows a wide World card + one card per continent with real flags
+  (**flag-icons 7.5.0**, MIT, local SVGs — no outside requests; emoji flags don't render on Windows). Locations also
+  store `countryCode` for the flags. In a game, a map button in the top bar switches map by changing `/play?map=…`;
+  `PlayGame` is keyed by the map, so a new map = a fresh game. Create Party's picker stays for Phase 9.
+- **Country maps (2026-10-22):** any country with ≥ 20 locations (`MIN_COUNTRY_MAP_LOCATIONS`) gets a map, built from the
+  database (`listCountryMaps` / `resolveMap` in `src/server/services/mapService.ts`), so more unlock as the pool grows
+  (41 today). Id = lowercase country code (`/play?map=fr`); Zod checks the shape, `resolveMap` checks the database
+  ("zz" or a country below 20 → 400). `Game.mapId` is now a free string (max 20) instead of a fixed list.
+- **Status:** Accepted (2026-10-22).
+
+## D-022 — Guess/result/summary map: official Google map (Maps JavaScript API), one per visit (supersedes D-021 for display)
+- **Context:** the owner wants exactly WorldGuessr's map. WorldGuessr loads Google's map and Street View from Google's
+  internal servers (`mt{s}.google.com/vt`, `streetviewpixels-pa.googleapis.com`) — free and unlimited only because
+  it bypasses Google's official, counted services; against the Google Maps Platform terms and CLAUDE.md §7.
+  Declined. The official Map Tiles API would allow only ~7 games/day free (100,000 tiles/month).
+- **Decision (owner: "official Google map, keep the 160 cap"):** `GoogleGameMap` (Maps JavaScript API, roadmap,
+  advanced markers with our SVG pins from `src/lib/map/pinSvg.ts`, dashed polylines) is created ONCE per visit and
+  only moved/resized by PlayGame between guess (bottom-right, grows on hover via JS with a 300 ms shrink delay),
+  result (full screen) and summary (beside the panel). Street View is also kept mounted across "Play again".
+  So one visit = 2 loads (1 map + 1 panorama) for any number of games → ~80 visits/day with the 160/day cap,
+  inside both free allowances (Dynamic Maps 10,000/month, Dynamic Street View 5,000/month). Shared loader:
+  `src/lib/google/mapsLoader.ts`.
+- **Before launch:** create a free Map ID in Google Cloud and set `NEXT_PUBLIC_GOOGLE_MAP_ID` (dev uses
+  `DEMO_MAP_ID`). The Leaflet/MapLibre map files (GuessMap, SummaryMap, GameBaseMap…) and the `leaflet`,
+  `react-leaflet`, `maplibre-gl`, `@maplibre/maplibre-gl-leaflet` packages are now unused — remove them once
+  no other work depends on them (another session was editing GameBaseMap at the time).
+- **Status:** Accepted (2026-10-22).
+
+## D-023 — Hosting: Vercel Hobby (free), deployed early at the owner's request
+- **Context:** the owner wants the game online now (Phase 10 deployment pulled forward, 2026-10-22). Cloudflare
+  Workers (via `@opennextjs/cloudflare`) was considered and briefly chosen, then compared.
+- **Decision:** **Vercel Hobby.** Vercel builds Next.js itself, so Mongoose, Better Auth (scrypt hashing) and
+  Nodemailer run unchanged on full Node.js. Cloudflare's free plan has a 10 ms CPU limit per request, a 3 MiB
+  compressed Worker limit, and Mongoose/Nodemailer were unverified there (checked 2026-10-22) — too much platform
+  debugging for a first deployment. Free address: `<project>.vercel.app`; a custom domain is optional and paid.
+- **Trade-offs:** Hobby is for non-commercial use only (fine for a learning project). Vercel functions do not keep
+  WebSocket connections open, so Phase 9 multiplayer needs a second host or a move (e.g. Cloudflare Durable Objects)
+  — decided in Phase 9.
+- **Status:** Accepted (2026-10-22).

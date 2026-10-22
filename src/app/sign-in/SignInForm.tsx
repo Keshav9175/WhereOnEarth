@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { signIn } from "@/lib/auth-client";
-import { INPUT, LABEL, PRIMARY_BUTTON } from "@/components/formStyles";
+import { signIn, VERIFIED_CALLBACK_URL } from "@/lib/auth-client";
+import { ERROR_TEXT, HINT_TEXT, INPUT, LABEL, PRIMARY_BUTTON, TEXT_LINK } from "@/components/formStyles";
 
 export function SignInForm() {
   const router = useRouter();
@@ -19,10 +19,25 @@ export function SignInForm() {
     setError(null);
 
     try {
-      const result = await signIn.email({ email: email.trim(), password });
+      const result = await signIn.email({
+        email: email.trim(),
+        password,
+        callbackURL: VERIFIED_CALLBACK_URL,
+      });
+
+      // Right password, but the email isn't confirmed yet. The server has just emailed a new link.
+      if (result.error?.code === "EMAIL_NOT_VERIFIED") {
+        setError("Please verify your email first. We've just sent you a new link — check your inbox.");
+        return;
+      }
 
       if (result.error) {
-        setError(result.error.message ?? "Could not sign you in.");
+        // 5xx = our server broke (e.g. database unreachable) — not the player's fault.
+        setError(
+          result.error.status >= 500
+            ? "Our server had a problem. Please try again in a moment."
+            : (result.error.message ?? "Could not sign you in."),
+        );
         return;
       }
 
@@ -62,18 +77,22 @@ export function SignInForm() {
       </label>
 
       {error && (
-        <p className="text-error" role="alert">
+        <p className={ERROR_TEXT} role="alert">
           {error}
         </p>
       )}
+
+      <Link href="/forgot-password" className={`${TEXT_LINK} -mt-2 self-end text-sm`}>
+        Forgot password?
+      </Link>
 
       <button className={PRIMARY_BUTTON} type="submit" disabled={busy}>
         {busy ? "Signing in…" : "Sign in"}
       </button>
 
-      <p className="text-sm text-muted">
+      <p className={HINT_TEXT}>
         New here?{" "}
-        <Link href="/sign-up" className="text-primary underline">
+        <Link href="/sign-up" className={TEXT_LINK}>
           Create an account
         </Link>
       </p>

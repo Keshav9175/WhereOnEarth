@@ -60,15 +60,28 @@ Exact folder and scripts are confirmed in Phase 2.
   `PROGRESS.md` and `LEARNING_GUIDE.md`. Check that they match reality.
 - **Never paste real secrets into chat** unless necessary. Prefer placing them directly in `.env.local` yourself.
 
-## 8. Google Maps Embed API key (Street View)
-1. Google Cloud Console → create or select a project (e.g. "WhereOnEarth").
-2. Link a billing account (required by Google Maps Platform; the Embed API itself is no-charge).
-3. APIs & Services → Library → **Maps Embed API** → Enable.
-4. APIs & Services → Credentials → Create credentials → **API key**.
-5. Edit the key:
-   - **Application restrictions:** Websites → add `http://localhost:3000/*` (add the production
-     domain later in Phase 10).
-   - **API restrictions:** Restrict key → only **Maps Embed API**.
-6. Put it in `.env.local` as `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY=...` and restart `npm run dev`.
-The key is visible in the browser by design (it's in the iframe URL). The restrictions are what protect it.
-Never enable billable APIs (Street View Static, Maps JavaScript, Map Tiles) on this key.
+## 8. Google Maps key (Street View — Maps JavaScript API)
+We use the **Maps JavaScript API** Street View (not the Embed iframe) because only it can hide the
+address card that reveals the answer (D-018).
+1. Google Cloud Console → project "WhereOnEarth" (billing account linked; required by Google).
+2. APIs & Services → Library → **Maps JavaScript API** → Enable.
+3. APIs & Services → Credentials → your key → **API restrictions** → tick **Maps JavaScript API**
+   (keep Maps Embed API too if listed). **Application restrictions:** Websites → `http://localhost:3000/*`.
+4. **Stay free:** APIs & Services → Maps JavaScript API → **Quotas & System Limits** → find the
+   *Dynamic Street View* per-day quota → set it to **160** (≈ 5,000 free/month ÷ 31). Above the cap
+   Google refuses requests instead of billing. Also keep a Billing → Budgets & alerts email alert.
+5. `.env.local`: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...` (the old `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY` still
+   works as a fallback, so one key can serve both). Restart `npm run dev`.
+The key is visible in the browser by design; the restrictions are what protect it.
+
+## 9. Server-only Google key (building the location pool)
+`npm run generate:locations` asks Google "is there Street View near this point?" thousands of times. That check
+(Street View Static API **metadata**) is free and uses no quota. It needs its own key, because the browser key
+only works from `http://localhost:3000/*` pages and a script has no web page.
+1. Google Cloud console → **APIs & Services → Library** → search **"Street View Static API"** → **Enable**.
+2. **APIs & Services → Credentials → + Create credentials → API key**. Rename it "WhereOnEarth server".
+3. Edit the key → **Application restrictions: None** (or "IP addresses" with your office IPs) →
+   **API restrictions: Restrict key → only "Street View Static API"** → Save.
+4. Add it to `.env.local` (never commit it, never add `NEXT_PUBLIC_`): `GOOGLE_MAPS_SERVER_API_KEY=...`
+5. Try a small run first: `npm run generate:locations -- --total 50 --countries IN,FR --dry-run`
+   (checks everything, saves nothing). Then a real run: `npm run generate:locations`.
