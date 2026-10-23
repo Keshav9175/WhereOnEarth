@@ -72,6 +72,7 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
   }
   // End screen: the round the map is zoomed on (null = all rounds).
   const [focusedRound, setFocusedRound] = useState<number | null>(null);
+  const [mobileMapExpanded, setMobileMapExpanded] = useState(false);
 
   // The guess map box and the Guess button: the map grows while the mouse is over either of them.
   const mapBoxRef = useRef<HTMLElement>(null);
@@ -143,6 +144,21 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
 
   const isFinished = game !== null && game.currentPanorama === null;
   const guessing = Boolean(game?.currentPanorama) && result === null;
+  useEffect(() => {
+    if (!guessing) return;
+    const phoneLayout = window.matchMedia(
+      "(max-width: 480px) and (pointer: coarse), (max-height: 500px) and (pointer: coarse) and (orientation: landscape)",
+    );
+    const collapseOnOutsideTap = (event: PointerEvent) => {
+      if (!phoneLayout.matches || !mobileMapExpanded) return;
+      if (event.target instanceof Node && !mapBoxRef.current?.contains(event.target)) {
+        setMobileMapExpanded(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", collapseOnOutsideTap, true);
+    return () => document.removeEventListener("pointerdown", collapseOnOutsideTap, true);
+  }, [guessing, mobileMapExpanded]);
   const mapHovered = useGuessMapExpansion(guessing, mapBoxRef, guessButtonRef);
   const mapSize = useGuessMapSize(mapHovered);
   const roundLabel = result
@@ -168,11 +184,11 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
     mapView = { mode: "guess", guess, onGuessChange: setGuess };
     // Bottom-right, above the Guess button, 4rem from the right edge where Google's own Street View
     // controls and links live (those must stay visible).
-    mapBox = `z-10 right-16 bottom-[5.75rem] left-3 h-48 rounded-2xl shadow-2xl ring-2 ring-white/40 sm:left-auto ${GROW_MOTION} ${mapSize.boxClass}`;
+    mapBox = `mobile-game-map ${mobileMapExpanded ? "mobile-game-map-expanded" : ""} z-10 right-16 bottom-[5.75rem] left-3 h-48 rounded-2xl shadow-2xl ring-2 ring-white/40 sm:left-auto ${GROW_MOTION} ${mapSize.boxClass}`;
   }
 
   return (
-    <main className="relative isolate h-dvh overflow-hidden bg-[#01275e] text-white">
+    <main className="mobile-game-stage relative isolate h-dvh overflow-hidden bg-[#01275e] text-white">
       {/* ---------- Loading / error before the game exists ---------- */}
       {!game && (
         <CenterScreen>
@@ -221,18 +237,24 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
         ref={mapBoxRef}
       >
         <GoogleGameMap view={mapView} />
-        {mapView.mode === "guess" && <GuessMapControls size={mapSize} />}
+        {mapView.mode === "guess" && (
+          <GuessMapControls
+            size={mapSize}
+            mobileExpanded={mobileMapExpanded}
+            onToggleMobile={() => setMobileMapExpanded((expanded) => !expanded)}
+          />
+        )}
       </section>
 
       {/* ---------- Guessing: the Guess button under the map (same width, grows with it) ---------- */}
       {mapView.mode === "guess" && (
         <div
           ref={guessButtonRef}
-          className={`absolute right-16 bottom-10 left-3 z-10 sm:left-auto ${GROW_MOTION} ${mapSize.widthClass}`}
+          className={`mobile-guess-button ${mobileMapExpanded ? "mobile-guess-button-expanded" : ""} absolute right-16 bottom-10 left-3 z-10 sm:left-auto ${GROW_MOTION} ${mapSize.widthClass}`}
         >
           <button type="button" onClick={submitGuess} disabled={!guess || busy} className={`${PRIMARY_BUTTON} w-full`}>
             <MapPin aria-hidden="true" className="size-5" />
-            {busy ? "Checking…" : guess ? "Guess" : "Place your pin on the map"}
+            {busy ? "Checking…" : "Guess"}
           </button>
         </div>
       )}
@@ -285,7 +307,7 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
       {/* ---------- Top bar (always on top): back + logo on the left, round and score on the right ----------
           The corners are free: Google's address panel is turned off and so is its fullscreen button.
           Google's remaining controls (zoom, compass) and its logo/credits sit lower down, never covered. */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-[600] flex items-start justify-between gap-3 p-3 sm:p-4">
+      <header className="mobile-game-hud pointer-events-none absolute inset-x-0 top-0 z-[600] flex items-start justify-between gap-3 p-3 sm:p-4">
         <div className="flex items-center gap-2">
           <ExitGameButton inProgress={game !== null && !isFinished} />
           <div className={`${GLASS} hidden px-3 py-2 sm:block`}>
@@ -295,7 +317,7 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
         </div>
         {game && (
           <p
-            className={`${GLASS} pointer-events-auto flex items-center gap-3 px-4 py-2.5 text-sm font-semibold sm:text-base`}
+            className={`mobile-game-score ${GLASS} pointer-events-auto flex items-center gap-3 px-4 py-2.5 text-sm font-semibold sm:text-base`}
             aria-live="polite"
           >
             <span>{roundLabel}</span>

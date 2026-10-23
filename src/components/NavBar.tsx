@@ -130,7 +130,7 @@ export function NavBar({ userArea }: { userArea: ReactNode }) {
     // Its own transition name: during a page crossfade the bar is shown live, not faded (see globals.css).
     <header
       style={{ viewTransitionName: "site-header" }}
-      className="relative z-20 flex flex-wrap items-center justify-between gap-4 px-5 pt-5 lg:px-10"
+      className="mobile-home-navbar relative z-20 flex flex-wrap items-center justify-between gap-4 px-5 pt-5 lg:px-10"
     >
       <Link href="/" className="shrink-0" aria-label="WhereOnEarth home">
         <Image src={logo} alt="WhereOnEarth" preload className="h-14 w-auto drop-shadow-lg" />

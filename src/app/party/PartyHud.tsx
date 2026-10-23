@@ -87,19 +87,19 @@ export function PartyHud({ view, secondsLeft, centerLabel, calm = false, onLeave
 
   const clock = (
     <div
-      className={`pointer-events-auto flex min-w-28 flex-col items-center rounded-2xl border px-5 py-2 shadow-xl backdrop-blur-md transition-colors ${
+      className={`mobile-party-clock pointer-events-auto flex min-w-28 flex-col items-center rounded-2xl border px-5 py-2 shadow-xl backdrop-blur-md transition-colors ${
         urgent ? "border-rose-300/50 bg-rose-700/80" : calm ? "border-white/15 bg-blue-800/80" : "border-white/15 bg-emerald-800/80"
       }`}
       aria-live="off"
     >
       <span className="text-xs font-semibold tracking-wide text-white/80">{centerLabel ?? `Round ${view.roundNumber} / ${view.totalRounds}`}</span>
-      <span className="text-3xl font-extrabold tabular-nums">{secondsLeft === null ? "∞" : `${secondsLeft}s`}</span>
+      <span className="mobile-party-clock-value text-3xl font-extrabold tabular-nums">{secondsLeft === null ? "∞" : `${secondsLeft}s`}</span>
     </div>
   );
 
   if (duel) {
     return (
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-[600] grid grid-cols-[1fr_auto_1fr] items-start gap-2 p-3 sm:p-4">
+      <header className="mobile-party-hud pointer-events-none absolute inset-x-0 top-0 z-[600] grid grid-cols-[1fr_auto_1fr] items-start gap-2 p-3 sm:p-4">
         <div className="pointer-events-auto flex items-start gap-2">
           <LeaveButton onLeave={onLeave} />
           <div className="hidden sm:block">
@@ -117,7 +117,7 @@ export function PartyHud({ view, secondsLeft, centerLabel, calm = false, onLeave
   }
 
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-0 z-[600] flex items-start justify-between gap-2 p-3 sm:p-4">
+    <header className="mobile-party-hud pointer-events-none absolute inset-x-0 top-0 z-[600] flex items-start justify-between gap-2 p-3 sm:p-4">
       <div className="pointer-events-auto flex items-center gap-2">
         <LeaveButton onLeave={onLeave} />
         <p

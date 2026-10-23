@@ -3,7 +3,7 @@
 import { SkipForward } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { OCEAN_BACKGROUND } from "@/components/PageShell";
-import { INTRO_ATTRIBUTE, INTRO_SEEN_KEY, INTRO_VIDEO_LANDSCAPE, INTRO_VIDEO_PORTRAIT } from "@/lib/intro";
+import { INTRO_ATTRIBUTE, INTRO_SEEN_KEY, INTRO_VIDEO_LANDSCAPE } from "@/lib/intro";
 
 // If the video hasn't started after this long (slow network, blocked autoplay), give up quietly.
 const START_TIMEOUT_MS = 6000;
@@ -14,11 +14,6 @@ const shouldPlayNow = () => document.documentElement.getAttribute(INTRO_ATTRIBUT
 // The server can't see the browser's storage, so it always says "don't play". React then reads the
 // real value after hydration without a hydration error (that's what useSyncExternalStore is for).
 const shouldPlayOnServer = () => false;
-
-// Only called in the browser (the video is never rendered on the server).
-function pickVideo() {
-  return window.matchMedia("(orientation: portrait)").matches ? INTRO_VIDEO_PORTRAIT : INTRO_VIDEO_LANDSCAPE;
-}
 
 function rememberSeen() {
   try {
@@ -79,7 +74,7 @@ export function IntroVideo() {
       {active && (
         <>
           <video
-            src={pickVideo()}
+            src={INTRO_VIDEO_LANDSCAPE}
             autoPlay
             muted
             playsInline

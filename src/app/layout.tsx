@@ -31,16 +31,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       {/* Browser extensions (e.g. Grammarly) add attributes to <body> before React loads.
           This ignores attribute differences on <body> only — not its contents. */}
       <body suppressHydrationWarning className={`flex min-h-screen flex-col text-white ${OCEAN_BACKGROUND}`}>
-        <NavBar
-          userArea={
-            <Suspense fallback={<div className="h-12 w-48 rounded-full bg-white/10" />}>
-              <HomeUserArea />
-            </Suspense>
-          }
-        />
-        {/* Page changes fade smoothly instead of cutting from one page to the next. Next.js
-            navigations trigger it automatically; browsers without support simply switch instantly. */}
-        <PageTransition>{children}</PageTransition>
+        <div className="mobile-app-stage flex min-h-0 flex-1 flex-col">
+          <NavBar
+            userArea={
+              <Suspense fallback={<div className="h-12 w-48 rounded-full bg-white/10" />}>
+                <HomeUserArea />
+              </Suspense>
+            }
+          />
+          {/* Page changes fade smoothly instead of cutting from one page to the next. Next.js
+              navigations trigger it automatically; browsers without support simply switch instantly. */}
+          <PageTransition>{children}</PageTransition>
+        </div>
       </body>
     </html>
   );

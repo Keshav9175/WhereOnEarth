@@ -129,14 +129,16 @@ function CardArt({ mode }: { mode: GameMode }) {
 function CardLabel({ mode }: { mode: GameMode }) {
   return (
     <>
-      <span className="relative grid size-12 shrink-0 place-items-center rounded-full bg-slate-950/25 ring-1 ring-white/40">
+      <span className="mobile-mode-icon relative grid size-12 shrink-0 place-items-center rounded-full bg-slate-950/25 ring-1 ring-white/40">
         <mode.icon aria-hidden="true" className={`size-6 ${mode.iconColor}`} />
       </span>
-      <span className="relative max-w-[58%] min-w-0 flex-1 text-left">
-        <span className="block truncate text-lg leading-tight font-bold text-white drop-shadow">
+      <span className="mobile-mode-label relative max-w-[58%] min-w-0 flex-1 text-left">
+        <span className="mobile-mode-title block truncate text-lg leading-tight font-bold text-white drop-shadow">
           {mode.title}
         </span>
-        <span className="block truncate text-xs text-white/80 drop-shadow">{mode.description}</span>
+        <span className="mobile-mode-description block truncate text-xs text-white/80 drop-shadow">
+          {mode.description}
+        </span>
       </span>
     </>
   );
@@ -147,11 +149,11 @@ function PlayableCard({ mode }: { mode: GameMode }) {
   return (
     <Link
       href={mode.href ?? "/"}
-      className={`${CARD_BASE} flex h-24 items-center gap-4 px-4 transition hover:-translate-y-0.5 hover:ring-white/50 hover:brightness-110 ${FOCUS_RING}`}
+      className={`mobile-mode-card ${CARD_BASE} flex h-24 items-center gap-4 px-4 transition hover:-translate-y-0.5 hover:ring-white/50 hover:brightness-110 ${FOCUS_RING}`}
     >
       <CardArt mode={mode} />
       <CardLabel mode={mode} />
-      <span className="relative ml-auto grid size-8 shrink-0 place-items-center rounded-full border border-white/80 bg-slate-950/30 backdrop-blur-sm">
+      <span className="mobile-mode-chevron relative ml-auto grid size-8 shrink-0 place-items-center rounded-full border border-white/80 bg-slate-950/30 backdrop-blur-sm">
         <ChevronRight aria-hidden="true" className="size-4 text-white" />
       </span>
     </Link>
@@ -186,7 +188,7 @@ function ExpandableCard({ mode, isOpen, onOpen, onClose }: ExpandableCardProps) 
   return (
     <div
       onKeyDown={handleKeyDown}
-      className={`${CARD_BASE} transition ${isOpen ? "ring-white/60" : "hover:ring-white/50 hover:brightness-110"}`}
+      className={`mobile-mode-card-wrap ${CARD_BASE} transition ${isOpen ? "ring-white/60" : "hover:ring-white/50 hover:brightness-110"}`}
     >
       <CardArt mode={mode} />
 
@@ -196,7 +198,7 @@ function ExpandableCard({ mode, isOpen, onOpen, onClose }: ExpandableCardProps) 
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={isOpen ? onClose : onOpen}
-        className={`relative flex h-24 w-full cursor-pointer items-center gap-4 rounded-2xl px-4 ${FOCUS_RING}`}
+        className={`mobile-mode-card relative flex h-24 w-full cursor-pointer items-center gap-4 rounded-2xl px-4 ${FOCUS_RING}`}
       >
         <CardLabel mode={mode} />
         <span className="relative ml-auto grid size-8 shrink-0 place-items-center rounded-full border border-white/80 bg-slate-950/30 backdrop-blur-sm">
@@ -270,9 +272,12 @@ export function GameModeCards() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   return (
-    <ul aria-label="Game modes" className="flex flex-col gap-6">
+    <ul aria-label="Game modes" className="mobile-mode-carousel flex flex-col gap-6">
       {MODES.map((mode) => (
-        <li key={mode.id}>
+        <li
+          key={mode.id}
+          className={`mobile-mode-item ${openId === mode.id ? "mobile-mode-item-expanded" : openId ? "mobile-mode-item-collapsed" : ""}`}
+        >
           {mode.options ? (
             <ExpandableCard
               mode={{ ...mode, options: mode.options }}

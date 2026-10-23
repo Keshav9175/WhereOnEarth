@@ -11,7 +11,7 @@ export default function HomePage() {
   return (
     <>
       <IntroVideo />
-      <main className="relative isolate flex flex-1 flex-col text-white">
+      <main className="mobile-home-page relative isolate flex flex-1 flex-col text-white">
         {/* World map. Decorative, so alt="" (screen readers skip it).
             Large screens: a big map on the right that slides softly under the cards.
             Small screens: a faint background. On large screens it is nudged a little left and down
@@ -30,8 +30,8 @@ export default function HomePage() {
           />
         </div>
   
-        <div className="flex flex-1 flex-col px-5 pt-6 pb-5 lg:px-10">
-          <div className="flex w-full max-w-sm flex-1 flex-col justify-center">
+        <div className="mobile-home-content flex flex-1 flex-col px-5 pt-6 pb-5 lg:px-10">
+          <div className="mobile-mode-container flex w-full max-w-sm flex-1 flex-col justify-center">
             {/* Invisible heading: screen readers announce the page by its <h1>. */}
             <h1 className="sr-only">WhereOnEarth — choose a game mode</h1>
             <GameModeCards />

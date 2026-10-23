@@ -89,6 +89,7 @@ export function GoogleGameMap({ view, className = "" }: { view: GameMapView; cla
   // Create the map once.
   useEffect(() => {
     let cancelled = false;
+    let resizeObserver: ResizeObserver | null = null;
 
     async function create() {
       try {
@@ -121,6 +122,12 @@ export function GoogleGameMap({ view, className = "" }: { view: GameMapView; cla
 
         mapRef.current = map;
         libsRef.current = { Polyline, AdvancedMarkerElement, LatLngBounds, event };
+        resizeObserver = new ResizeObserver(() => {
+          requestAnimationFrame(() => {
+            if (!cancelled) event.trigger(map, "resize");
+          });
+        });
+        resizeObserver.observe(containerRef.current);
         setReady(true);
       } catch {
         if (!cancelled) setError("The map could not load. Check your connection and refresh.");
@@ -130,6 +137,7 @@ export function GoogleGameMap({ view, className = "" }: { view: GameMapView; cla
     void create();
     return () => {
       cancelled = true;
+      resizeObserver?.disconnect();
     };
   }, []);
 

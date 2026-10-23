@@ -78,6 +78,7 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
   }
   // A new round starts with an empty guess.
   const [draftRound, setDraftRound] = useState(view.roundNumber);
+  const [mobileMapExpanded, setMobileMapExpanded] = useState(false);
   if (draftRound !== view.roundNumber) {
     setDraftRound(view.roundNumber);
     setDraft(null);
@@ -86,6 +87,21 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
   const guessing = view.phase === "round" && view.yourGuess === null;
   const mapBoxRef = useRef<HTMLElement>(null);
   const guessButtonRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!guessing) return;
+    const phoneLayout = window.matchMedia(
+      "(max-width: 480px) and (pointer: coarse), (max-height: 500px) and (pointer: coarse) and (orientation: landscape)",
+    );
+    const collapseOnOutsideTap = (event: PointerEvent) => {
+      if (!phoneLayout.matches || !mobileMapExpanded) return;
+      if (event.target instanceof Node && !mapBoxRef.current?.contains(event.target)) {
+        setMobileMapExpanded(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", collapseOnOutsideTap, true);
+    return () => document.removeEventListener("pointerdown", collapseOnOutsideTap, true);
+  }, [guessing, mobileMapExpanded]);
   const mapHovered = useGuessMapExpansion(guessing, mapBoxRef, guessButtonRef);
   const mapSize = useGuessMapSize(mapHovered);
   const secondsLeft = useSecondsLeft(view.endsAt, clockOffset);
@@ -115,7 +131,7 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
   let mapBox: string;
   if (view.phase === "round") {
     mapView = { mode: "guess", guess: view.yourGuess ?? draft, onGuessChange: guessing ? movePin : () => {} };
-    mapBox = `z-10 right-16 bottom-[5.75rem] left-3 h-48 rounded-2xl shadow-2xl ring-2 ring-white/40 sm:left-auto ${GROW_MOTION} ${mapSize.boxClass}`;
+    mapBox = `mobile-game-map ${mobileMapExpanded ? "mobile-game-map-expanded" : ""} z-10 right-16 bottom-[5.75rem] left-3 h-48 rounded-2xl shadow-2xl ring-2 ring-white/40 sm:left-auto ${GROW_MOTION} ${mapSize.boxClass}`;
   } else {
     const rounds = view.phase === "final" ? view.history.map(toMapRound) : view.result ? [toMapRound({ roundNumber: view.roundNumber, ...view.result })] : [];
     mapView = { mode: "party", rounds };
@@ -130,7 +146,7 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
   const myRoundGuess = view.result?.guesses.find((guess) => guess.playerId === view.you);
 
   return (
-    <main className="relative isolate h-dvh overflow-hidden bg-[#01275e] text-white">
+    <main className="mobile-game-stage relative isolate h-dvh overflow-hidden bg-[#01275e] text-white">
       {panoramaSpot && (
         <div className={`absolute inset-0 ${view.phase === "round" ? "" : "invisible"}`}>
           <StreetViewPanorama
@@ -145,12 +161,18 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
 
       <section ref={mapBoxRef} aria-label={view.phase === "round" ? "Guess map: click to place your pin" : "Map"} className={`absolute overflow-hidden ${mapBox}`}>
         <GoogleGameMap view={mapView} />
-        {view.phase === "round" && <GuessMapControls size={mapSize} />}
+        {view.phase === "round" && (
+          <GuessMapControls
+            size={mapSize}
+            mobileExpanded={mobileMapExpanded}
+            onToggleMobile={() => setMobileMapExpanded((expanded) => !expanded)}
+          />
+        )}
       </section>
 
       {/* ---------- Round: Guess button ---------- */}
       {view.phase === "round" && (
-        <div ref={guessButtonRef} className={`absolute right-16 bottom-10 left-3 z-10 sm:left-auto ${GROW_MOTION} ${mapSize.widthClass}`}>
+        <div ref={guessButtonRef} className={`mobile-guess-button ${mobileMapExpanded ? "mobile-guess-button-expanded" : ""} absolute right-16 bottom-10 left-3 z-10 sm:left-auto ${GROW_MOTION} ${mapSize.widthClass}`}>
           {view.yourGuess ? (
             <p className={`${GLASS} flex items-center justify-center gap-2 px-4 py-2.5 font-semibold`} aria-live="polite">
               <Check aria-hidden="true" className="size-5 text-emerald-300" />
@@ -164,7 +186,7 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
               className={`${PRIMARY_BUTTON} w-full`}
             >
               <MapPin aria-hidden="true" className="size-5" />
-              {draft ? "Guess" : "Place your pin on the map"}
+              Guess
             </button>
           )}
         </div>

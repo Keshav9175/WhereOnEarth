@@ -111,3 +111,560 @@ body {
 ::view-transition-new(site-header) {
   animation: none;
 }
+
+/* Phone layouts only (narrow portrait phones, plus coarse-pointer phones in landscape).
+   The desktop/tablet presentation remains the existing Tailwind layout. */
+@media (max-width: 480px) and (pointer: coarse), (max-height: 500px) and (pointer: coarse) and (orientation: landscape) {
+  .mobile-home-content {
+    min-height: 0;
+    overflow: hidden;
+    padding: 0.75rem 1rem 1rem;
+  }
+
+  .mobile-mode-container {
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    justify-content: center;
+  }
+
+  .mobile-mode-carousel {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: 100%;
+    max-height: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    padding: 0 0.25rem 0.75rem;
+    scrollbar-width: none;
+  }
+
+  .mobile-mode-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-mode-item {
+    flex: 0 0 78vw;
+    width: 78vw;
+    scroll-snap-align: center;
+  }
+
+  .mobile-mode-card-wrap {
+    position: relative;
+  }
+
+  .mobile-mode-card {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: min(54dvh, 28rem);
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem;
+    text-align: left;
+  }
+
+  .mobile-mode-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .mobile-mode-label {
+    max-width: 78%;
+  }
+
+  .mobile-mode-title {
+    font-size: 1.25rem;
+  }
+
+  .mobile-mode-description {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    font-size: 0.875rem;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .mobile-mode-chevron {
+    position: absolute;
+    right: 1rem;
+    bottom: 1.25rem;
+  }
+
+  a.mobile-mode-card > span:last-child,
+  button.mobile-mode-card > span:last-child {
+    position: absolute;
+    right: 1rem;
+    bottom: 1.25rem;
+  }
+
+  .mobile-game-map {
+    top: auto !important;
+    right: 12px !important;
+    bottom: calc(env(safe-area-inset-bottom) + 4.25rem) !important;
+    left: auto !important;
+    width: 32vw !important;
+    min-width: 112px;
+    max-width: 40vw;
+    height: 28dvh !important;
+    max-height: none !important;
+    border-radius: 1rem;
+  }
+
+  .mobile-game-map.mobile-game-map-expanded {
+    width: min(88vw, 34rem) !important;
+    max-width: 88vw;
+    height: 62dvh !important;
+  }
+
+  .mobile-map-toggle {
+    display: grid !important;
+  }
+
+  [role="toolbar"][aria-label="Map size"] {
+    display: none !important;
+  }
+
+  .mobile-guess-button {
+    top: auto !important;
+    right: 12px !important;
+    bottom: calc(env(safe-area-inset-bottom) + 8px) !important;
+    left: auto !important;
+    width: 32vw !important;
+    min-width: 112px;
+    max-width: 40vw;
+  }
+
+  .mobile-guess-button.mobile-guess-button-expanded {
+    width: min(88vw, 34rem) !important;
+    max-width: 88vw;
+  }
+
+  .mobile-guess-button > button {
+    min-height: 40px;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.875rem;
+  }
+
+  .mobile-game-hud,
+  .mobile-party-hud {
+    gap: 0.35rem;
+    padding: 0.5rem;
+  }
+
+  .mobile-game-score {
+    gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .mobile-party-clock {
+    min-width: 0;
+    gap: 0;
+    border-radius: 0.75rem;
+    padding: 0.3rem 0.55rem;
+  }
+
+  .mobile-party-clock-value {
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+}
+
+@media (max-height: 500px) and (pointer: coarse) and (orientation: landscape) {
+  .mobile-home-content {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .mobile-mode-carousel {
+    gap: 0.65rem;
+  }
+
+  .mobile-mode-item {
+    flex-basis: 36vw;
+    width: 36vw;
+  }
+
+  .mobile-mode-card {
+    height: 72dvh;
+  }
+
+  .mobile-game-map {
+    right: 12px !important;
+    bottom: calc(env(safe-area-inset-bottom) + 3.5rem) !important;
+    width: 25vw !important;
+    max-width: 32vw;
+    height: 56dvh !important;
+  }
+
+  .mobile-game-map.mobile-game-map-expanded {
+    width: 58vw !important;
+    max-width: 58vw;
+    height: 76dvh !important;
+  }
+
+  .mobile-guess-button {
+    right: 12px !important;
+    bottom: calc(env(safe-area-inset-bottom) + 4px) !important;
+    width: 25vw !important;
+    max-width: 32vw;
+  }
+
+  .mobile-guess-button.mobile-guess-button-expanded {
+    width: 58vw !important;
+    max-width: 58vw;
+  }
+}
+
+/* Force landscape gameplay on narrow phones held upright. The stage's unrotated box is sized
+   to the viewport's landscape dimensions, then moved to the right edge before rotating clockwise.
+   Dynamic viewport units and the orientation media query update automatically on device rotation. */
+@media (max-width: 600px) and (max-aspect-ratio: 9/16) and (pointer: coarse) and (orientation: portrait) {
+  /* The stage now lays out in landscape dimensions even though CSS viewport units still describe
+     the physical portrait viewport. Use the corresponding swapped units for its floating map. */
+  .mobile-game-map {
+    right: 12px !important;
+    bottom: 3.5rem !important;
+    width: 24dvh !important;
+    min-width: 112px;
+    max-width: 30dvh;
+    height: 28dvw !important;
+  }
+
+  .mobile-game-map.mobile-game-map-expanded {
+    width: min(58dvh, 34rem) !important;
+    max-width: 88dvh;
+    height: 58dvw !important;
+  }
+
+  .mobile-guess-button {
+    right: 12px !important;
+    bottom: 8px !important;
+    width: 24dvh !important;
+    min-width: 112px;
+    max-width: 30dvh;
+  }
+
+  .mobile-guess-button.mobile-guess-button-expanded {
+    width: min(58dvh, 34rem) !important;
+    max-width: 88dvh;
+  }
+}
+
+/* Every app route shares a landscape canvas on narrow portrait phones. This keeps the header and
+   navigation in place when switching tabs; desktop, tablet, and native landscape remain untouched. */
+@media (max-width: 600px) and (max-aspect-ratio: 9/16) and (pointer: coarse) and (orientation: portrait) {
+  html:has(.mobile-app-stage),
+  body:has(.mobile-app-stage) {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body:has(.mobile-app-stage) .mobile-app-stage {
+    position: fixed;
+    top: 0;
+    left: 100dvw;
+    display: flex;
+    width: 100dvh;
+    height: 100dvw;
+    min-height: 0;
+    flex-direction: column;
+    transform: rotate(90deg);
+    transform-origin: top left;
+    overflow: hidden;
+  }
+
+  .mobile-app-stage .mobile-game-stage {
+    position: relative;
+    width: 100%;
+    height: 100% !important;
+    transform: none;
+  }
+
+  .mobile-app-stage main {
+    min-height: 0;
+  }
+
+  .mobile-app-stage main:not(.mobile-game-stage) {
+    width: 100%;
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .mobile-home-navbar {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-areas: "logo nav account";
+    grid-template-columns: auto minmax(0, 1fr) max-content;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.75rem 0.85rem 0;
+  }
+
+  .mobile-home-navbar > a:first-child {
+    grid-area: logo;
+  }
+
+  .mobile-home-navbar > a:first-child img {
+    height: 2.85rem;
+  }
+
+  .mobile-home-navbar > nav {
+    grid-area: nav;
+    order: 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  .mobile-home-navbar > nav ul {
+    width: max-content;
+    max-width: 100%;
+    margin-inline: auto;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 0.15rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .mobile-home-navbar > nav ul::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-home-navbar > nav li {
+    flex: 0 0 auto;
+  }
+
+  .mobile-home-navbar > nav li a,
+  .mobile-home-navbar > nav li span {
+    white-space: nowrap;
+    gap: 0.3rem;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.72rem;
+  }
+
+  .mobile-home-navbar > nav li svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .mobile-home-navbar > div {
+    grid-area: account;
+    justify-self: end;
+    min-width: max-content;
+  }
+
+  .mobile-home-navbar > div > div {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    white-space: nowrap;
+  }
+
+  .mobile-home-navbar > div a {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.8rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .mobile-home-navbar > div a:first-child {
+    border: 1px solid rgb(255 255 255 / 18%);
+    background: rgb(2 6 23 / 28%);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 12%);
+  }
+
+  .mobile-home-navbar > div a:last-child {
+    padding-inline: 0.85rem;
+    box-shadow: 0 6px 18px rgb(0 72 180 / 28%);
+  }
+
+  .mobile-home-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0.85rem 0.85rem 0.75rem;
+  }
+
+  .mobile-mode-container {
+    min-height: 0;
+    justify-content: center;
+  }
+
+  .mobile-mode-carousel {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    align-items: stretch;
+    gap: 0.65rem;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    padding: 0 0.15rem 0.35rem;
+  }
+
+  .mobile-mode-item {
+    flex: 1 1 0;
+    width: 25%;
+    height: 100%;
+    min-width: 0;
+    scroll-snap-align: none;
+    transition: flex-grow 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .mobile-mode-item-expanded {
+    flex-grow: 2.5;
+  }
+
+  .mobile-mode-item-collapsed {
+    flex-grow: 0.5;
+  }
+
+  .mobile-mode-card-wrap {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+  }
+
+  a.mobile-mode-card {
+    height: min(56dvw, 22rem);
+  }
+
+  .mobile-mode-card-wrap > button.mobile-mode-card {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    height: auto;
+  }
+
+  .mobile-mode-card-wrap > div[id] {
+    flex: 0 0 auto;
+  }
+
+  .mobile-mode-card-wrap > div[id] > div > div {
+    gap: 0.35rem;
+    padding: 0.35rem;
+  }
+
+  .mobile-mode-card-wrap > div[id] a,
+  .mobile-mode-card-wrap > div[id] button {
+    min-width: 0;
+    padding: 0.45rem 0.25rem;
+  }
+
+  .mobile-mode-card-wrap > div[id] a > span:first-child,
+  .mobile-mode-card-wrap > div[id] button > span:first-child {
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 0.68rem;
+    line-height: 1.1;
+  }
+
+  .mobile-mode-card-wrap > div[id] a > span:last-child,
+  .mobile-mode-card-wrap > div[id] button > span:last-child {
+    font-size: 0.5rem;
+  }
+
+  .mobile-mode-card {
+    height: 100%;
+    min-height: 0;
+    padding: 0.7rem;
+    gap: 0.4rem;
+  }
+
+  .mobile-mode-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .mobile-mode-icon svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .mobile-mode-label {
+    max-width: 100%;
+  }
+
+  .mobile-mode-title {
+    font-size: 0.9rem;
+  }
+
+  .mobile-mode-description {
+    font-size: 0.68rem;
+    line-height: 1.2;
+  }
+
+  .mobile-mode-chevron {
+    right: 0.55rem;
+    bottom: 0.55rem;
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+
+  .mobile-home-content {
+    padding: 0.85rem 0.65rem 0.65rem;
+  }
+
+  .mobile-home-navbar {
+    grid-template-columns: auto minmax(0, 1fr) max-content;
+    gap: 0.45rem;
+  }
+
+  .mobile-home-navbar > nav li a,
+  .mobile-home-navbar > nav li span {
+    gap: 0.25rem;
+    padding: 0.4rem 0.48rem;
+    font-size: 0.74rem;
+  }
+
+  .mobile-home-navbar > a:first-child img {
+    height: 2.8rem;
+  }
+
+  .mobile-home-navbar > div > div {
+    gap: 0.25rem;
+  }
+
+  .mobile-home-navbar > div a {
+    min-height: 2rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.68rem;
+  }
+
+  .mobile-mode-carousel {
+    gap: 0.45rem;
+  }
+
+  .mobile-mode-card {
+    padding: 0.55rem;
+  }
+
+  .mobile-mode-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .mobile-mode-title {
+    font-size: 0.78rem;
+  }
+
+  .mobile-mode-description {
+    font-size: 0.6rem;
+  }
+}
