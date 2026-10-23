@@ -18,6 +18,10 @@ export function screenToRotatedMapPixel(
   return { x: screenY - rect.top, y: rect.right - screenX };
 }
 
+export function screenDeltaToRotatedMapDelta(screenDelta: { x: number; y: number }): { x: number; y: number } {
+  return { x: screenDelta.y, y: -screenDelta.x };
+}
+
 function toWorldPixel(point: Coordinates, zoom: number) {
   const latitude = Math.max(-MAX_MERCATOR_LATITUDE, Math.min(MAX_MERCATOR_LATITUDE, point.lat));
   const sin = Math.sin((latitude * Math.PI) / 180);

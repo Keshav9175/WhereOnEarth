@@ -2,12 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   panCenterForRotatedDrag,
   rotatedMapPixelToCoordinates,
+  screenDeltaToRotatedMapDelta,
   screenToRotatedMapPixel,
 } from "./rotatedMapInteraction";
 
 describe("rotated map touch coordinates", () => {
   it("maps screen coordinates back to landscape map pixels after clockwise rotation", () => {
     expect(screenToRotatedMapPixel(270, 140, { top: 40, right: 310 })).toEqual({ x: 100, y: 40 });
+  });
+
+  it("maps screen drag deltas back to landscape axes", () => {
+    expect(screenDeltaToRotatedMapDelta({ x: 12, y: -8 })).toEqual({ x: -8, y: -12 });
   });
 
   it("resolves the center pixel to the map center", () => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { loadGoogleLibrary, MAPS_API_KEY } from "@/lib/google/mapsLoader";
+import { screenDeltaToRotatedMapDelta } from "@/lib/map/rotatedMapInteraction";
 import type { Movement } from "@/lib/party/protocol";
 import type { Coordinates } from "@/types/geo";
 
@@ -61,6 +62,7 @@ export function StreetViewPanorama({
   const containerRef = useRef<HTMLDivElement>(null);
   const panoramaRef = useRef<google.maps.StreetViewPanorama | null>(null);
   const serviceRef = useRef<google.maps.StreetViewService | null>(null);
+  const pointerAdapterCleanupRef = useRef<(() => void) | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The latest `paused`, readable from the async code below (which may finish later).
   const pausedRef = useRef(paused);
@@ -143,6 +145,94 @@ export function StreetViewPanorama({
           panoramaRef.current.setPov({ heading: 0, pitch: 0 });
           panoramaRef.current.setZoom(0);
         }
+
+        const forcedLandscape = window.matchMedia(
+          "(max-width: 600px) and (max-aspect-ratio: 9/16) and (pointer: coarse) and (orientation: portrait)",
+        );
+        type ActivePointer = { id: number; startX: number; startY: number; lastX: number; lastY: number; dragging: boolean };
+        let activePointer: ActivePointer | null = null;
+        const updateGestureMode = () => {
+          container.style.touchAction = forcedLandscape.matches ? "none" : "";
+          activePointer = null;
+        };
+        const isGoogleControl = (target: EventTarget | null) =>
+          target instanceof Element &&
+          Boolean(target.closest("button, a, [role='button'], .gm-control-active, .gm-svpc, .gm-fullscreen-control"));
+        const stopGoogleDrag = (event: PointerEvent) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        };
+        const onPointerDown = (event: PointerEvent) => {
+          if (!forcedLandscape.matches || rulesRef.current.movement === "nmpz" || isGoogleControl(event.target)) return;
+          if (event.pointerType === "mouse" && event.button !== 0) return;
+          // Let taps reach Google unchanged (including click-to-go); only take over once this becomes a drag.
+          activePointer = {
+            id: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            lastX: event.clientX,
+            lastY: event.clientY,
+            dragging: false,
+          };
+        };
+        const onPointerMove = (event: PointerEvent) => {
+          if (!forcedLandscape.matches || activePointer?.id !== event.pointerId) return;
+          const pointer = activePointer;
+          if (!pointer.dragging && Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) > 5) {
+            pointer.dragging = true;
+            try {
+              container.setPointerCapture(event.pointerId);
+            } catch {
+              // Continue handling drags that remain within the panorama if capture is unavailable.
+            }
+          }
+          if (!pointer.dragging) return;
+          stopGoogleDrag(event);
+
+          const screenDelta = { x: event.clientX - pointer.lastX, y: event.clientY - pointer.lastY };
+          pointer.lastX = event.clientX;
+          pointer.lastY = event.clientY;
+          const panorama = panoramaRef.current;
+          const size = { width: container.clientWidth, height: container.clientHeight };
+          const zoom = panorama?.getZoom() ?? 0;
+          if (!panorama || size.width <= 0 || size.height <= 0) return;
+
+          // Google Street View's default horizontal field of view is about 180° at zoom 0,
+          // halving for each zoom step. The viewport is landscape-sized inside this rotated stage.
+          const horizontalFov = Math.min(179, 180 / 2 ** zoom);
+          const verticalFov =
+            (2 * Math.atan(Math.tan((horizontalFov * Math.PI) / 360) * (size.height / size.width)) * 180) /
+            Math.PI;
+          const localDelta = screenDeltaToRotatedMapDelta(screenDelta);
+          const pov = panorama.getPov();
+          panorama.setPov({
+            heading: pov.heading - (localDelta.x * horizontalFov) / size.width,
+            pitch: Math.max(-90, Math.min(90, pov.pitch - (localDelta.y * verticalFov) / size.height)),
+          });
+        };
+        const finishPointer = (event: PointerEvent) => {
+          if (activePointer?.id !== event.pointerId) return;
+          if (activePointer.dragging) stopGoogleDrag(event);
+          activePointer = null;
+          if (container.hasPointerCapture(event.pointerId)) container.releasePointerCapture(event.pointerId);
+        };
+
+        forcedLandscape.addEventListener("change", updateGestureMode);
+        updateGestureMode();
+        container.addEventListener("pointerdown", onPointerDown, true);
+        container.addEventListener("pointermove", onPointerMove, true);
+        container.addEventListener("pointerup", finishPointer, true);
+        container.addEventListener("pointercancel", finishPointer, true);
+        container.addEventListener("lostpointercapture", finishPointer, true);
+        pointerAdapterCleanupRef.current = () => {
+          forcedLandscape.removeEventListener("change", updateGestureMode);
+          container.removeEventListener("pointerdown", onPointerDown, true);
+          container.removeEventListener("pointermove", onPointerMove, true);
+          container.removeEventListener("pointerup", finishPointer, true);
+          container.removeEventListener("pointercancel", finishPointer, true);
+          container.removeEventListener("lostpointercapture", finishPointer, true);
+          container.style.touchAction = "";
+        };
         setError(null);
       } catch (cause) {
         if (cancelled) return;
@@ -156,6 +246,8 @@ export function StreetViewPanorama({
     void show();
     return () => {
       cancelled = true;
+      pointerAdapterCleanupRef.current?.();
+      pointerAdapterCleanupRef.current = null;
     };
   }, [lat, lng]);
 
