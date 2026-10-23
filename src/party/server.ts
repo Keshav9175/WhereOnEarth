@@ -211,6 +211,8 @@ async function handle(connection: Connection, message: ClientMessage) {
         mapName: map.name,
         rounds: message.rounds,
         roundSeconds: message.roundSeconds,
+        movement: message.movement,
+        roadNames: message.roadNames,
       });
       return broadcast(party);
     }
@@ -243,6 +245,10 @@ async function handle(connection: Connection, message: ClientMessage) {
       schedule(party);
       return broadcast(party);
     }
+    case "pin":
+      // Only remembered on the server; nobody else sees it, so there's nothing to broadcast.
+      party.room.pin(me, { lat: message.lat, lng: message.lng });
+      return;
     case "guess":
       party.room.guess(me, { lat: message.lat, lng: message.lng }, Date.now());
       endRoundIfEveryoneGuessed(party);

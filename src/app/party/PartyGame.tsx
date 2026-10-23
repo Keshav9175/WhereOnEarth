@@ -8,7 +8,9 @@ import { MAX_SCORE } from "@/lib/game/scoring";
 import type { ClientMessage, PartyView } from "@/lib/party/protocol";
 import type { Coordinates } from "@/types/geo";
 import { GLASS, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../play/gameStyles";
+import { GuessMapControls } from "../play/GuessMapControls";
 import { useGuessMapExpansion } from "../play/useGuessMapExpansion";
+import { useGuessMapSize } from "../play/useGuessMapSize";
 import { LAST_GUESSER_SECONDS, RESULTS_SECONDS } from "@/lib/party/room";
 import { PartyHud } from "./PartyHud";
 
@@ -84,7 +86,8 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
   const guessing = view.phase === "round" && view.yourGuess === null;
   const mapBoxRef = useRef<HTMLElement>(null);
   const guessButtonRef = useRef<HTMLDivElement>(null);
-  const mapExpanded = useGuessMapExpansion(guessing, mapBoxRef, guessButtonRef);
+  const mapHovered = useGuessMapExpansion(guessing, mapBoxRef, guessButtonRef);
+  const mapSize = useGuessMapSize(mapHovered);
   const secondsLeft = useSecondsLeft(view.endsAt, clockOffset);
   const nextIn = useSecondsLeft(view.nextAt, clockOffset);
 
@@ -100,14 +103,19 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
     })),
   });
 
+  // Every click moves the pin AND tells the server: if time runs out before the player presses Guess,
+  // the server counts this last pin as their guess (like WorldGuessr). Pressing Guess locks it.
+  function movePin(point: Coordinates) {
+    setDraft(point);
+    send({ type: "pin", lat: point.lat, lng: point.lng });
+  }
+
   // What the ONE map shows, and where its box sits.
   let mapView: GameMapView;
   let mapBox: string;
   if (view.phase === "round") {
-    mapView = { mode: "guess", guess: view.yourGuess ?? draft, onGuessChange: guessing ? setDraft : () => {} };
-    mapBox = `z-10 right-16 bottom-[5.75rem] left-3 h-48 rounded-2xl shadow-2xl ring-2 ring-white/40 sm:left-auto ${GROW_MOTION} ${
-      mapExpanded ? "sm:h-96 sm:w-[36rem]" : "sm:h-52 sm:w-80"
-    }`;
+    mapView = { mode: "guess", guess: view.yourGuess ?? draft, onGuessChange: guessing ? movePin : () => {} };
+    mapBox = `z-10 right-16 bottom-[5.75rem] left-3 h-48 rounded-2xl shadow-2xl ring-2 ring-white/40 sm:left-auto ${GROW_MOTION} ${mapSize.boxClass}`;
   } else {
     const rounds = view.phase === "final" ? view.history.map(toMapRound) : view.result ? [toMapRound({ roundNumber: view.roundNumber, ...view.result })] : [];
     mapView = { mode: "party", rounds };
@@ -125,17 +133,24 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
     <main className="relative isolate h-dvh overflow-hidden bg-[#01275e] text-white">
       {panoramaSpot && (
         <div className={`absolute inset-0 ${view.phase === "round" ? "" : "invisible"}`}>
-          <StreetViewPanorama location={panoramaSpot} paused={view.phase !== "round"} className="h-full w-full" />
+          <StreetViewPanorama
+            location={panoramaSpot}
+            paused={view.phase !== "round"}
+            movement={view.settings.movement}
+            roadNames={view.settings.roadNames}
+            className="h-full w-full"
+          />
         </div>
       )}
 
       <section ref={mapBoxRef} aria-label={view.phase === "round" ? "Guess map: click to place your pin" : "Map"} className={`absolute overflow-hidden ${mapBox}`}>
         <GoogleGameMap view={mapView} />
+        {view.phase === "round" && <GuessMapControls size={mapSize} />}
       </section>
 
       {/* ---------- Round: Guess button ---------- */}
       {view.phase === "round" && (
-        <div ref={guessButtonRef} className={`absolute right-16 bottom-10 left-3 z-10 sm:left-auto ${GROW_MOTION} ${mapExpanded ? "sm:w-[36rem]" : "sm:w-80"}`}>
+        <div ref={guessButtonRef} className={`absolute right-16 bottom-10 left-3 z-10 sm:left-auto ${GROW_MOTION} ${mapSize.widthClass}`}>
           {view.yourGuess ? (
             <p className={`${GLASS} flex items-center justify-center gap-2 px-4 py-2.5 font-semibold`} aria-live="polite">
               <Check aria-hidden="true" className="size-5 text-emerald-300" />

@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { signIn, VERIFIED_CALLBACK_URL } from "@/lib/auth-client";
+import { safeNextPath } from "@/lib/safeNextPath";
 import { ERROR_TEXT, HINT_TEXT, INPUT, LABEL, PRIMARY_BUTTON, TEXT_LINK } from "@/components/formStyles";
 
 export function SignInForm() {
   const router = useRouter();
+  // ?next=/party: go back where the player came from (only paths on our own site).
+  const next = safeNextPath(useSearchParams().get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +44,8 @@ export function SignInForm() {
         return;
       }
 
-      // Signing in lands on the home screen; the player chooses what to play from there.
-      router.push("/");
+      // Signing in lands on the home screen (or back where the player came from, e.g. a party).
+      router.push(next);
       router.refresh();
     } catch {
       setError("Could not reach the server. Please try again.");

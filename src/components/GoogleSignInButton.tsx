@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "@/lib/auth-client";
 import { FIRST_GAME_URL } from "@/lib/maps/catalog";
+import { CHOOSE_USERNAME_URL } from "@/lib/username";
 import { ERROR_TEXT } from "./formStyles";
 
 type GoogleSignInButtonProps = {
@@ -10,8 +11,8 @@ type GoogleSignInButtonProps = {
   callbackURL?: string;
 };
 
-// A first-time Google player (Better Auth creates their account here) goes straight into their
-// first game instead (newUserCallbackURL).
+// A first-time Google player (Better Auth creates their account here) first picks a unique username,
+// then goes into their first game (newUserCallbackURL).
 export function GoogleSignInButton({ callbackURL = "/" }: GoogleSignInButtonProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +24,7 @@ export function GoogleSignInButton({ callbackURL = "/" }: GoogleSignInButtonProp
       const result = await signIn.social({
         provider: "google",
         callbackURL,
-        newUserCallbackURL: FIRST_GAME_URL,
+        newUserCallbackURL: `${CHOOSE_USERNAME_URL}?next=${encodeURIComponent(FIRST_GAME_URL)}`,
       });
       if (result.error) {
         setError(result.error.message ?? "Could not start Google sign-in.");

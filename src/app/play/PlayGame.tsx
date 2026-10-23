@@ -15,7 +15,9 @@ import { ExitGameButton } from "./ExitGameButton";
 import { MapSwitcher, type CountryChoice } from "./MapSwitcher";
 import { GameSummary } from "./GameSummary";
 import { GLASS, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./gameStyles";
+import { GuessMapControls } from "./GuessMapControls";
 import { useGuessMapExpansion } from "./useGuessMapExpansion";
+import { useGuessMapSize } from "./useGuessMapSize";
 
 // How the guess map grows on hover: width and height together over 0.5 s with a soft ease-out curve.
 // Phones don't grow the map, so the sizes only change from `sm:` (640px wide) up.
@@ -141,7 +143,8 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
 
   const isFinished = game !== null && game.currentPanorama === null;
   const guessing = Boolean(game?.currentPanorama) && result === null;
-  const mapExpanded = useGuessMapExpansion(guessing, mapBoxRef, guessButtonRef);
+  const mapHovered = useGuessMapExpansion(guessing, mapBoxRef, guessButtonRef);
+  const mapSize = useGuessMapSize(mapHovered);
   const roundLabel = result
     ? `Round ${result.roundNumber} / ${game?.totalRounds ?? 5}`
     : game?.currentRound
@@ -165,9 +168,7 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
     mapView = { mode: "guess", guess, onGuessChange: setGuess };
     // Bottom-right, above the Guess button, 4rem from the right edge where Google's own Street View
     // controls and links live (those must stay visible).
-    mapBox = `z-10 right-16 bottom-[5.75rem] left-3 h-48 rounded-2xl shadow-2xl ring-2 ring-white/40 sm:left-auto ${GROW_MOTION} ${
-      mapExpanded ? "sm:h-96 sm:w-[36rem]" : "sm:h-52 sm:w-80"
-    }`;
+    mapBox = `z-10 right-16 bottom-[5.75rem] left-3 h-48 rounded-2xl shadow-2xl ring-2 ring-white/40 sm:left-auto ${GROW_MOTION} ${mapSize.boxClass}`;
   }
 
   return (
@@ -213,20 +214,21 @@ export function PlayGame({ map, countryMaps }: PlayGameProps) {
 
       {/* ---------- The ONE Google map (guess / result / summary) ----------
           Created once per visit and only moved and resized, because Google counts every map created.
-          While guessing it grows (towards the left) when hovered or focused, for precise guesses. */}
+          While guessing it opens (towards the left) when hovered or focused, to the size the player chose. */}
       <section
         aria-label={mapView.mode === "guess" ? "Guess map: click to place your pin" : "Map"}
         className={`absolute overflow-hidden ${mapBox}`}
         ref={mapBoxRef}
       >
         <GoogleGameMap view={mapView} />
+        {mapView.mode === "guess" && <GuessMapControls size={mapSize} />}
       </section>
 
       {/* ---------- Guessing: the Guess button under the map (same width, grows with it) ---------- */}
       {mapView.mode === "guess" && (
         <div
           ref={guessButtonRef}
-          className={`absolute right-16 bottom-10 left-3 z-10 sm:left-auto ${GROW_MOTION} ${mapExpanded ? "sm:w-[36rem]" : "sm:w-80"}`}
+          className={`absolute right-16 bottom-10 left-3 z-10 sm:left-auto ${GROW_MOTION} ${mapSize.widthClass}`}
         >
           <button type="button" onClick={submitGuess} disabled={!guess || busy} className={`${PRIMARY_BUTTON} w-full`}>
             <MapPin aria-hidden="true" className="size-5" />

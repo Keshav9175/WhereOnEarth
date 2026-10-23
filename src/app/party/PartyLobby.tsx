@@ -6,10 +6,11 @@ import { ERROR_TEXT } from "@/components/formStyles";
 import { GLASS_PANEL } from "@/components/PageShell";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Select } from "@/components/ui/Select";
-import { MAPS } from "@/lib/maps/catalog";
+import { LISTED_MAPS } from "@/lib/maps/catalog";
 import {
   MAX_PARTY_PLAYERS,
   ROUND_COUNT_CHOICES,
+  type Movement,
   ROUND_TIME_CHOICES,
   type ClientMessage,
   type PartySettings,
@@ -17,13 +18,24 @@ import {
 } from "@/lib/party/protocol";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "../play/gameStyles";
 
-const MAP_OPTIONS = MAPS.map((map) => ({ value: map.id, label: map.name, hint: map.description }));
+const MAP_OPTIONS = LISTED_MAPS.map((map) => ({ value: map.id, label: map.name, hint: map.description }));
 const ROUND_SEGMENTS = ROUND_COUNT_CHOICES.map((rounds) => ({ value: rounds, label: String(rounds) }));
 const TIME_SEGMENTS = ROUND_TIME_CHOICES.map((seconds) => ({
   value: seconds,
   label: seconds === 0 ? "∞" : seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60}m` : `${seconds}s`,
   title: seconds === 0 ? "No time limit" : `${seconds} seconds per round`,
 }));
+
+// Street View rules (like WorldGuessr). NMPZ = no move, no pan, no zoom.
+const MOVEMENT_SEGMENTS: { value: Movement; label: string; title: string }[] = [
+  { value: "moving", label: "Moving", title: "Walk along the roads, look around and zoom" },
+  { value: "no-move", label: "No move", title: "Look around and zoom, but you can't walk" },
+  { value: "nmpz", label: "NMPZ", title: "No move, no pan, no zoom: only the starting view" },
+];
+const ROAD_NAME_SEGMENTS = [
+  { value: "hidden", label: "Hidden", title: "Street names on the roads are hidden (harder)" },
+  { value: "shown", label: "Shown", title: "Street names are painted on the roads (easier)" },
+] as const;
 
 // "5 rounds · 60 s each · about 6 min" — so everyone knows what they're signing up for.
 function summary({ rounds, roundSeconds }: PartySettings) {
@@ -59,12 +71,16 @@ export function PartyLobby({ view, send, onLeave, error }: PartyLobbyProps) {
   }
 
   // The server checks the values and sends everyone the new settings.
-  const changeSettings = (changes: Partial<Pick<PartySettings, "mapId" | "rounds" | "roundSeconds">>) =>
+  const changeSettings = (
+    changes: Partial<Pick<PartySettings, "mapId" | "rounds" | "roundSeconds" | "movement" | "roadNames">>,
+  ) =>
     send({
       type: "settings",
       mapId: changes.mapId ?? view.settings.mapId,
       rounds: (changes.rounds ?? view.settings.rounds) as (typeof ROUND_COUNT_CHOICES)[number],
       roundSeconds: (changes.roundSeconds ?? view.settings.roundSeconds) as (typeof ROUND_TIME_CHOICES)[number],
+      movement: changes.movement ?? view.settings.movement,
+      roadNames: changes.roadNames ?? view.settings.roadNames,
     });
 
   return (
@@ -154,6 +170,20 @@ export function PartyLobby({ view, send, onLeave, error }: PartyLobbyProps) {
               value={view.settings.roundSeconds}
               segments={TIME_SEGMENTS}
               onChange={(roundSeconds) => changeSettings({ roundSeconds })}
+              disabled={!isHost}
+            />
+            <SegmentedControl
+              label="Movement"
+              value={view.settings.movement}
+              segments={MOVEMENT_SEGMENTS}
+              onChange={(movement) => changeSettings({ movement })}
+              disabled={!isHost}
+            />
+            <SegmentedControl
+              label="Road names"
+              value={view.settings.roadNames ? "shown" : "hidden"}
+              segments={[...ROAD_NAME_SEGMENTS]}
+              onChange={(choice) => changeSettings({ roadNames: choice === "shown" })}
               disabled={!isHost}
             />
 

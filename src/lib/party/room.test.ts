@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { MAX_PARTY_PLAYERS } from "./protocol";
+import { MAX_PARTY_PLAYERS, type PartySettings } from "./protocol";
 import { LAST_GUESSER_SECONDS, PartyError, PartyRoom, RESULTS_SECONDS, type PartyLocation } from "./room";
 
 const PARIS: PartyLocation = { lat: 48.8566, lng: 2.3522, country: "France" };
+const BASE_SETTINGS: PartySettings = {
+  mapId: "world",
+  mapName: "World",
+  rounds: 5,
+  roundSeconds: 60,
+  movement: "moving",
+  roadNames: false,
+};
 const FIVE_ROUNDS: PartyLocation[] = Array.from({ length: 5 }, () => PARIS);
 
 function roomWith(...names: string[]) {
@@ -93,7 +101,7 @@ describe("PartyRoom: pacing (like WorldGuessr)", () => {
 
   it("also hurries the last player in a 'no time limit' round", () => {
     const room = roomWith("ana", "ben");
-    room.updateSettings("ana", { mapId: "world", mapName: "World", rounds: 5, roundSeconds: 0 });
+    room.updateSettings("ana", { ...BASE_SETTINGS, rounds: 5, roundSeconds: 0 });
     room.start("ana", FIVE_ROUNDS, 0);
     expect(room.viewFor("ben").endsAt).toBeNull();
     room.guess("ana", { lat: 1, lng: 1 }, 5_000);
@@ -162,19 +170,19 @@ describe("PartyRoom: playing", () => {
 
   it("sets a deadline from the round time, or none for 'no limit'", () => {
     const room = roomWith("ana");
-    room.updateSettings("ana", { mapId: "world", mapName: "World", rounds: 5, roundSeconds: 30 });
+    room.updateSettings("ana", { ...BASE_SETTINGS, rounds: 5, roundSeconds: 30 });
     room.start("ana", FIVE_ROUNDS, 1000);
     expect(room.viewFor("ana").endsAt).toBe(31_000);
 
     const relaxed = roomWith("ana");
-    relaxed.updateSettings("ana", { mapId: "world", mapName: "World", rounds: 5, roundSeconds: 0 });
+    relaxed.updateSettings("ana", { ...BASE_SETTINGS, rounds: 5, roundSeconds: 0 });
     relaxed.start("ana", FIVE_ROUNDS, 1000);
     expect(relaxed.viewFor("ana").endsAt).toBeNull();
   });
 
   it("plays the number of rounds the host chose", () => {
     const room = roomWith("ana");
-    room.updateSettings("ana", { mapId: "world", mapName: "World", rounds: 3, roundSeconds: 60 });
+    room.updateSettings("ana", { ...BASE_SETTINGS, rounds: 3, roundSeconds: 60 });
     room.start("ana", FIVE_ROUNDS, 0); // more locations than needed: only 3 are used
     expect(room.viewFor("ana").totalRounds).toBe(3);
     for (let round = 1; round <= 3; round++) {
@@ -188,7 +196,7 @@ describe("PartyRoom: playing", () => {
 
   it("refuses to start with fewer locations than rounds", () => {
     const room = roomWith("ana");
-    room.updateSettings("ana", { mapId: "world", mapName: "World", rounds: 10, roundSeconds: 60 });
+    room.updateSettings("ana", { ...BASE_SETTINGS, rounds: 10, roundSeconds: 60 });
     expect(() => room.start("ana", FIVE_ROUNDS, 0)).toThrow("Not enough locations");
   });
 
@@ -209,5 +217,63 @@ describe("PartyRoom: playing", () => {
     room.backToLobby("ana");
     expect(room.viewFor("ana").phase).toBe("lobby");
     expect(room.viewFor("ana").players[0].score).toBe(0);
+  });
+});
+
+describe("PartyRoom: unlocked pins (like WorldGuessr)", () => {
+  it("counts a player's LAST pin as their guess when time runs out", () => {
+    const room = roomWith("ana", "ben");
+    room.start("ana", FIVE_ROUNDS, 0);
+    room.pin("ben", { lat: 0, lng: 0 });
+    room.pin("ben", { lat: PARIS.lat, lng: PARIS.lng }); // moved the pin onto the answer
+    room.endRound(60_000); // time's up, Ben never pressed Guess
+
+    const ben = room.viewFor("ben").players.find((p) => p.id === "ben")!;
+    expect(ben.score).toBe(5000);
+    expect(room.viewFor("ben").result?.guesses.map((g) => g.playerId)).toContain("ben");
+  });
+
+  it("never lets a pin move a locked guess", () => {
+    const room = roomWith("ana", "ben");
+    room.start("ana", FIVE_ROUNDS, 0);
+    room.guess("ben", { lat: 0, lng: 0 }, 0); // locked far away
+    room.pin("ben", { lat: PARIS.lat, lng: PARIS.lng }); // ignored
+    room.endRound(60_000);
+
+    const ben = room.viewFor("ben").players.find((p) => p.id === "ben")!;
+    expect(ben.score).toBeLessThan(5000);
+  });
+
+  it("gives no guess to a player who never clicked the map", () => {
+    const room = roomWith("ana", "ben");
+    room.start("ana", FIVE_ROUNDS, 0);
+    room.endRound(60_000);
+    expect(room.viewFor("ana").result?.guesses).toEqual([]);
+  });
+
+  it("ignores a late pin that arrives after the round ended", () => {
+    const room = roomWith("ana");
+    room.start("ana", FIVE_ROUNDS, 0);
+    room.endRound(60_000);
+    room.pin("ana", { lat: PARIS.lat, lng: PARIS.lng });
+    expect(room.viewFor("ana").players[0].score).toBe(0);
+  });
+});
+
+describe("PartyRoom: Street View rules", () => {
+  it("starts with moving allowed and road names hidden", () => {
+    const room = roomWith("ana");
+    expect(room.viewFor("ana").settings).toMatchObject({ movement: "moving", roadNames: false });
+  });
+
+  it("lets the host choose NMPZ and road names; everyone sees the same rules", () => {
+    const room = roomWith("ana", "ben");
+    room.updateSettings("ana", { ...BASE_SETTINGS, movement: "nmpz", roadNames: true });
+    expect(room.viewFor("ben").settings).toMatchObject({ movement: "nmpz", roadNames: true });
+  });
+
+  it("doesn't let other players change the rules", () => {
+    const room = roomWith("ana", "ben");
+    expect(() => room.updateSettings("ben", { ...BASE_SETTINGS, movement: "no-move" })).toThrow(PartyError);
   });
 });

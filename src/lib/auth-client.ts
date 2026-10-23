@@ -1,11 +1,12 @@
+import { usernameClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 // The browser side of Better Auth. It calls our /api/auth/* endpoints for us.
 // No baseURL needed: the app and the API are on the same website (same domain).
-export const authClient = createAuthClient();
+export const authClient = createAuthClient({ plugins: [usernameClient()] });
 
 // Pull out the pieces we use, so components can import them by name.
-export const { signUp, signIn, signOut, useSession, requestPasswordReset, resetPassword } = authClient;
+export const { signUp, signIn, signOut, useSession, requestPasswordReset, resetPassword, updateUser } = authClient;
 
 // Where the link in the verification email sends the player after clicking it.
 export const VERIFIED_CALLBACK_URL = "/email-verified";

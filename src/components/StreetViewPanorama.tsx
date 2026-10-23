@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { loadGoogleLibrary, MAPS_API_KEY } from "@/lib/google/mapsLoader";
+import type { Movement } from "@/lib/party/protocol";
 import type { Coordinates } from "@/types/geo";
 
 // How far (metres) to look for the nearest Street View photo around a location.
@@ -15,7 +16,31 @@ type StreetViewPanoramaProps = {
   // True while the panorama is hidden behind other screens (results, summary): Google stops drawing
   // it, so the map on top can pan smoothly. It stays created (no new billable use).
   paused?: boolean;
+  // What the player may do (party setting, like WorldGuessr): walk ("moving", default), only look
+  // around ("no-move"), or nothing but the starting view ("nmpz" = no move, no pan, no zoom).
+  movement?: Movement;
+  // Show street names painted on the roads (a big hint). Off by default.
+  roadNames?: boolean;
 };
+
+// Google's Street View options for each movement mode. Keyboard keys have no option, so they are
+// blocked separately (see blockKeys below).
+function movementOptions(movement: Movement): google.maps.StreetViewPanoramaOptions {
+  const canMove = movement === "moving";
+  const canLook = movement !== "nmpz";
+  return {
+    clickToGo: canMove, // click on the road to walk there
+    linksControl: canMove, // the arrows on the road
+    zoomControl: canLook,
+    scrollwheel: canLook,
+    disableDoubleClickZoom: !canLook,
+    panControl: canLook, // the compass (turning by dragging is blocked by the overlay in NMPZ)
+  };
+}
+
+// Street View walks with ↑ ↓ (and W S); in NMPZ the arrows/keys also turn and zoom. Swallow those keys
+// before Google sees them ("capture" phase).
+const WALK_KEYS = new Set(["ArrowUp", "ArrowDown", "w", "W", "s", "S"]);
 
 const DEFAULT_PANORAMA_CLASSES = "h-full min-h-80 w-full rounded-xl";
 
@@ -30,6 +55,8 @@ export function StreetViewPanorama({
   location,
   className = DEFAULT_PANORAMA_CLASSES,
   paused = false,
+  movement = "moving",
+  roadNames = false,
 }: StreetViewPanoramaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const panoramaRef = useRef<google.maps.StreetViewPanorama | null>(null);
@@ -43,6 +70,29 @@ export function StreetViewPanorama({
     pausedRef.current = paused;
     panoramaRef.current?.setVisible(!paused);
   }, [paused]);
+
+  // The latest rules, readable from the async creation code below.
+  const rulesRef = useRef({ movement, roadNames });
+
+  // Apply the rules (also right after the panorama is created, below).
+  useEffect(() => {
+    rulesRef.current = { movement, roadNames };
+    panoramaRef.current?.setOptions({ ...movementOptions(movement), showRoadLabels: roadNames });
+  }, [movement, roadNames]);
+
+  // Block walking keys (no-move) or every key (NMPZ) inside the panorama.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || movement === "moving") return;
+    const blockKeys = (event: KeyboardEvent) => {
+      if (movement === "nmpz" || WALK_KEYS.has(event.key)) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+    };
+    container.addEventListener("keydown", blockKeys, true);
+    return () => container.removeEventListener("keydown", blockKeys, true);
+  }, [movement]);
 
   const { lat, lng } = location;
 
@@ -77,7 +127,9 @@ export function StreetViewPanorama({
             pov: { heading: 0, pitch: 0 },
             zoom: 0,
             addressControl: false, // ← hides the location name card (the whole point)
-            showRoadLabels: false, // ← hides street names painted on the roads, also a giveaway
+            // Street names painted on the roads are a big giveaway: hidden unless the party allows them.
+            showRoadLabels: rulesRef.current.roadNames,
+            ...movementOptions(rulesRef.current.movement),
             enableCloseButton: false,
             motionTracking: false,
             // The game already fills the window; turning this optional button off frees the top-right
@@ -125,10 +177,17 @@ export function StreetViewPanorama({
     <div className={`${className} relative bg-slate-800`}>
       <div
         ref={containerRef}
-        className="h-full w-full"
+        // "isolate" keeps Google's own stacking (its z-indexes) inside this box, so the NMPZ layer
+        // below can sit on top of it.
+        className="isolate h-full w-full"
         role="region"
         aria-label="Street View panorama — look around for clues"
       />
+      {/* NMPZ: Google has no "don't turn" option, so a see-through layer catches the drags. It stops short
+          of the bottom edge, where Google's logo, Terms and "Report a problem" links must stay usable. */}
+      {movement === "nmpz" && (
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 bottom-7 z-10 cursor-default" />
+      )}
       {error && (
         <p
           role="alert"

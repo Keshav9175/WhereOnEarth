@@ -93,6 +93,18 @@ export function PartyEntry({ startWith, inviteCode, send, error, notice }: Party
               Playing as <strong className="text-white">{session.user.name}</strong>
             </p>
           ) : (
+            <>
+            <p className="rounded-xl bg-white/5 px-3.5 py-3 text-sm text-white/75 ring-1 ring-white/10">
+              Playing as a guest.{" "}
+              <Link href="/sign-in?next=/party" className="font-semibold text-sky-300 hover:underline">
+                Sign in
+              </Link>{" "}
+              or{" "}
+              <Link href="/sign-up" className="font-semibold text-sky-300 hover:underline">
+                create an account
+              </Link>{" "}
+              to play under your username and keep your scores.
+            </p>
             <label className={LABEL}>
               Your name
               <input
@@ -105,6 +117,7 @@ export function PartyEntry({ startWith, inviteCode, send, error, notice }: Party
                 placeholder="e.g. Explorer42"
               />
             </label>
+            </>
           )}
 
           {tab === "join" && (

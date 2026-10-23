@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PRIMARY_FILL } from "@/components/formStyles";
+import { CHOOSE_USERNAME_URL } from "@/lib/username";
 import { getPlayerStats } from "@/server/services/playerService";
 import { getSignedInUser } from "@/server/session";
 
@@ -33,6 +34,15 @@ export async function HomeUserArea() {
 
   return (
     <div className="flex items-center gap-3">
+      {/* Accounts from before usernames existed (D-027): a gentle nudge to pick one. */}
+      {!user.username && (
+        <Link
+          href={CHOOSE_USERNAME_URL}
+          className="hidden rounded-full px-3 py-1.5 text-sm font-semibold text-sky-200 ring-1 ring-sky-300/50 hover:bg-sky-300/10 sm:inline-block focus-visible:outline-2 focus-visible:outline-amber-300"
+        >
+          Pick a username
+        </Link>
+      )}
       <Link
         href="/profile"
         title="Your profile"

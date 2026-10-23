@@ -2,6 +2,7 @@ import { haversineDistanceKm } from "@/lib/game/distance";
 import { calculateScore } from "@/lib/game/scoring";
 import type { Coordinates } from "@/types/geo";
 import {
+  DEFAULT_MOVEMENT,
   DEFAULT_ROUND_SECONDS,
   MAX_PARTY_PLAYERS,
   DEFAULT_ROUNDS,
@@ -32,7 +33,11 @@ type Round = {
   location: PartyLocation;
   startedAt: number;
   endsAt: number | null; // null = no time limit
+  // Locked guesses (the player pressed Guess). Final: the pin can't move any more.
   guesses: Map<string, RoundGuess>;
+  // Each player's latest pin that is NOT locked yet. When time runs out it counts as their guess
+  // (like WorldGuessr), so a player who clicked the map but forgot to press Guess still scores.
+  pins: Map<string, Coordinates>;
 };
 
 // Pin colours, one per player (in join order).
@@ -50,7 +55,14 @@ export class PartyRoom {
   hostId = "";
   phase: PartyPhase = "lobby";
   locked = false;
-  settings: PartySettings = { mapId: "world", mapName: "World", rounds: DEFAULT_ROUNDS, roundSeconds: DEFAULT_ROUND_SECONDS };
+  settings: PartySettings = {
+    mapId: "world",
+    mapName: "World",
+    rounds: DEFAULT_ROUNDS,
+    roundSeconds: DEFAULT_ROUND_SECONDS,
+    movement: DEFAULT_MOVEMENT,
+    roadNames: false,
+  };
   private players = new Map<string, Player>();
   private locations: PartyLocation[] = [];
   private rounds: Round[] = [];
@@ -151,6 +163,7 @@ export class PartyRoom {
       startedAt: now,
       endsAt: seconds > 0 ? now + seconds * 1000 : null,
       guesses: new Map(),
+      pins: new Map(),
     });
     this.phase = "round";
   }
@@ -159,15 +172,30 @@ export class PartyRoom {
     return this.rounds.at(-1) ?? null;
   }
 
-  // The SERVER works out distance and score from the true location (the browser only sends a point).
+  // The player moved their pin (not locked). Ignored once they've locked a guess or the round is over:
+  // a late pin from a slow connection must never change a finished round.
+  pin(playerId: string, point: Coordinates) {
+    const round = this.currentRound;
+    if (this.phase !== "round" || !round || !this.players.has(playerId) || round.guesses.has(playerId)) return;
+    round.pins.set(playerId, { lat: point.lat, lng: point.lng });
+  }
+
+  // Scores a point for a player. The SERVER works out distance and score from the true location
+  // (the browser only sends a point).
+  private scoreGuess(round: Round, playerId: string, point: Coordinates) {
+    const distanceKm = haversineDistanceKm(point, round.location);
+    round.guesses.set(playerId, { playerId, lat: point.lat, lng: point.lng, distanceKm, score: calculateScore(distanceKm) });
+    round.pins.delete(playerId);
+  }
+
+  // The player pressed Guess: their guess is locked and can't move any more.
   guess(playerId: string, point: Coordinates, now: number) {
     const round = this.currentRound;
     if (this.phase !== "round" || !round) throw new PartyError("There's no round to guess in.");
     if (!this.players.has(playerId)) throw new PartyError("You're not in this party.");
     if (round.guesses.has(playerId)) throw new PartyError("You've already guessed this round.");
 
-    const distanceKm = haversineDistanceKm(point, round.location);
-    round.guesses.set(playerId, { playerId, lat: point.lat, lng: point.lng, distanceKm, score: calculateScore(distanceKm) });
+    this.scoreGuess(round, playerId, point);
 
     // Hurry up the last one (like WorldGuessr): when only ONE connected player still has to guess, they get
     // at most LAST_GUESSER_SECONDS more — also in "no time limit" rounds, so nobody waits on an idle player.
@@ -191,6 +219,10 @@ export class PartyRoom {
   endRound(now: number) {
     const round = this.currentRound;
     if (this.phase !== "round" || !round) return;
+    // Time's up: an unlocked pin counts as that player's guess (their LAST click).
+    for (const [playerId, point] of round.pins) {
+      if (this.players.has(playerId)) this.scoreGuess(round, playerId, point);
+    }
     for (const guess of round.guesses.values()) {
       const player = this.players.get(guess.playerId);
       if (player) player.score += guess.score;

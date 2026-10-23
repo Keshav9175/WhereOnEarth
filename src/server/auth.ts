@@ -1,6 +1,8 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { nextCookies } from "better-auth/next-js";
+import { username } from "better-auth/plugins";
+import { USERNAME_RULES } from "@/lib/username";
 import mongoose from "mongoose";
 import { sendPasswordResetEmail, sendVerificationEmail } from "./email";
 
@@ -61,6 +63,15 @@ export const auth = betterAuth({
           },
         }
       : {},
-  // Must be the last plugin: lets server-side code set login cookies in Next.js.
-  plugins: [nextCookies()],
+  plugins: [
+    // Unique usernames (D-027). Better Auth's official plugin stores "username" (lowercase, for the
+    // uniqueness check — "Kiki" and "kiki" are the same name) and "displayUsername" (as typed).
+    username({
+      minUsernameLength: USERNAME_RULES.min,
+      maxUsernameLength: USERNAME_RULES.max,
+      usernameValidator: (value) => USERNAME_RULES.pattern.test(value),
+    }),
+    // Must be the last plugin: lets server-side code set login cookies in Next.js.
+    nextCookies(),
+  ],
 });

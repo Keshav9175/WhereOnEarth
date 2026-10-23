@@ -410,3 +410,54 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
   Per browser/device, not per account (a guest has no account on their first visit).
 - **Source files:** the video was made with a scratch HTML/canvas animation rendered by headless Chrome + ffmpeg
   (not part of the app).
+
+## D-027 — Unique usernames (Better Auth username plugin) + sign-in from the party page
+- **Decision:** Better Auth's official `username` plugin (part of better-auth, no new package). Rules in
+  `src/lib/username.ts`: 3–20 characters, letters/numbers/`_`/`.`. The plugin stores `username` lowercased (so
+  "Kiki" = "kiki" for uniqueness) and `displayUsername` as typed; a taken name → `USERNAME_IS_ALREADY_TAKEN` →
+  "That username is already taken". The chosen username is also saved as `name`, so the top bar, profile,
+  leaderboard and party tickets show it with no other changes. A unique MongoDB index on `user.username`
+  (partial: only where it's set) guards against two simultaneous sign-ups taking the same name.
+- **Flows:** email sign-up asks for the username; a new Google player goes to `/choose-username?next=…` (Better
+  Auth `newUserCallbackURL`) and then to their first game; older accounts without a username see a
+  "Pick a username" link in the top bar. Guests on `/party` get "Sign in / create an account" links;
+  `/sign-in?next=/party` returns them there. `next` is checked by `src/lib/safeNextPath.ts` (own-site paths only —
+  prevents an "open redirect" to another website).
+- **Status:** Accepted (2026-10-23).
+
+## D-028 — Party rounds: the last unlocked pin counts when time runs out (like WorldGuessr)
+- **Decision:** every map click in a party round also sends `{ type: "pin" }` to the party server, which keeps
+  each player's latest unlocked pin (`Round.pins` in `src/lib/party/room.ts`). Pressing **Guess** locks the guess
+  (it can't move). When the round ends, every player without a locked guess but with a pin gets that last pin
+  scored as their guess — distance and score computed on the server from the true location, as always.
+  Pins after a lock, or after the round ended, are ignored; nobody else sees a pin until the results.
+- **Why server-side:** sending the guess from the browser "at the last second" would lose it on a slow connection
+  and lets the client control timing; the server already owns the round timer.
+- **Status:** Accepted (2026-10-23). 4 new tests in `src/lib/party/room.test.ts`.
+
+## D-029 — Player-chosen guess-map size + flat badge pins
+
+- **Map size (like WorldGuessr — ideas only):** on wide screens the guess map has a small toolbar: bigger, smaller,
+  and pin (keep it open without hovering). Four open sizes, capped to the window; the choice is remembered in this
+  browser (`localStorage`, a per-player preference — nothing to store on the server). `useGuessMapSize` +
+  `GuessMapControls` are shared by single player and party.
+- **Why bottom-right:** the map grows up and to the left, so its bottom-right corner never moves. Buttons there stay
+  under the mouse; in a corner that moves, a quick second click landed on the map and dropped a pin.
+- **Pins:** flat solid-colour teardrop with a white badge in the head; the label (dot, flag, number, initial) is in the
+  pin's colour. Replaces the glossy gradient pin, whose white initials were hard to read on bright colours.
+- **Status:** Accepted (2026-10-23). Tests: `src/lib/map/pinSvg.test.ts`.
+
+## D-029 — Party Street View rules: Moving / No move / NMPZ, and road names
+- **Decision:** two new party settings (host-only, in the lobby, checked by Zod on the server):
+  `movement` = `moving` (default) | `no-move` | `nmpz`, and `roadNames` (default hidden).
+  `StreetViewPanorama` turns Google's documented options on/off: `clickToGo`, `linksControl` (no move);
+  plus `zoomControl`, `scrollwheel`, `disableDoubleClickZoom`, `panControl` (NMPZ); `showRoadLabels` for road names.
+  Google has no option for keyboard movement or for drag-to-turn, so we block walking keys (no move) / all keys
+  (NMPZ) in the capture phase, and in NMPZ a see-through layer catches drags. It stops 28 px above the bottom so
+  Google's logo, Terms and "Report a problem" stay usable. The panorama box uses `isolate` so Google's own
+  z-indexes can't rise above that layer.
+- **Limits:** these rules are enforced in the browser only (a player could edit the page). Scoring stays
+  server-side, so this only affects fairness between friends — same as WorldGuessr.
+- **Verified (2026-10-23):** in Chrome, NMPZ round: drag, ←/↑ keys and scroll left the view unchanged; no road
+  arrows or zoom controls. 122 tests pass (new: settings shape, host-only rules, Zod rejects unknown modes).
+- **Status:** Accepted (2026-10-23).

@@ -14,7 +14,21 @@ export const DEFAULT_ROUNDS = 5;
 export const ROUND_TIME_CHOICES = [30, 60, 90, 120, 0] as const; // seconds; 0 = no time limit
 export const DEFAULT_ROUND_SECONDS = 60;
 
-export type PartySettings = { mapId: string; mapName: string; rounds: number; roundSeconds: number };
+// How players may use Street View (like WorldGuessr): walk around, only look around, or
+// NMPZ = "no move, no pan, no zoom" (just the starting view).
+export const MOVEMENT_CHOICES = ["moving", "no-move", "nmpz"] as const;
+export type Movement = (typeof MOVEMENT_CHOICES)[number];
+export const DEFAULT_MOVEMENT: Movement = "moving";
+
+export type PartySettings = {
+  mapId: string;
+  mapName: string;
+  rounds: number;
+  roundSeconds: number;
+  movement: Movement;
+  // Street names painted on the roads in Street View (a big hint), off by default.
+  roadNames: boolean;
+};
 
 const name = z.string().trim().min(1, "Enter a name").max(20, "Max 20 characters");
 const code = z.string().regex(/^\d{6}$/, "A party code is 6 digits");
@@ -36,6 +50,8 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
     mapId: z.string().min(1).max(40),
     rounds: z.literal(ROUND_COUNT_CHOICES),
     roundSeconds: z.literal(ROUND_TIME_CHOICES),
+    movement: z.enum(MOVEMENT_CHOICES),
+    roadNames: z.boolean(),
   }),
   z.object({ type: z.literal("lock"), locked: z.boolean() }),
   z.object({ type: z.literal("kick"), playerId: z.string().min(1).max(40) }),
@@ -44,6 +60,8 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("backToLobby") }),
   // Everyone:
   z.object({ type: z.literal("guess"), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }),
+  // The player moved their (unlocked) pin. Counts as their guess if the round's time runs out.
+  z.object({ type: z.literal("pin"), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }),
 ]);
 
 export type ClientMessage = z.infer<typeof clientMessageSchema>;

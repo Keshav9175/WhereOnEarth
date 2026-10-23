@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { signUp, VERIFIED_CALLBACK_URL } from "@/lib/auth-client";
+import { USERNAME_HINT, USERNAME_RULES, usernameErrorMessage } from "@/lib/username";
 import {
   ERROR_TEXT,
   HINT_TEXT,
@@ -28,12 +29,20 @@ export function SignUpForm() {
     setError(null);
 
     try {
+      // The username must be unique (the server checks); `name` (shown everywhere) mirrors it.
       const result = await signUp.email({
         name: name.trim(),
+        username: name.trim(),
+        displayUsername: name.trim(),
         email: email.trim(),
         password,
         callbackURL: VERIFIED_CALLBACK_URL,
       });
+
+      if (result.error?.code?.startsWith("USERNAME") || result.error?.code === "INVALID_USERNAME") {
+        setError(usernameErrorMessage(result.error.code, result.error.message ?? "That username can't be used."));
+        return;
+      }
 
       if (result.error) {
         // 5xx = our server broke (e.g. database unreachable) — not the player's fault.
@@ -75,13 +84,16 @@ export function SignUpForm() {
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
       <label className={LABEL}>
-        Display name (shown on the leaderboard)
+        Username (shown on the leaderboard and in parties)
         <input
           className={INPUT}
           type="text"
-          autoComplete="nickname"
+          autoComplete="username"
           required
-          maxLength={40}
+          minLength={USERNAME_RULES.min}
+          maxLength={USERNAME_RULES.max}
+          pattern={USERNAME_RULES.pattern.source.slice(1, -1)}
+          title={USERNAME_HINT}
           value={name}
           onChange={(event) => setName(event.target.value)}
         />

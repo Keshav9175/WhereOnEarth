@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AuthCard } from "@/components/AuthCard";
 import { PageShell } from "@/components/PageShell";
 import { SignInForm } from "./SignInForm";
@@ -15,7 +16,10 @@ export default function SignInPage() {
         title="Welcome back"
         subtitle="Sign in to save your games and climb the leaderboard."
       >
-        <SignInForm />
+        {/* The form reads ?next from the address (per-request), so it sits inside Suspense. */}
+        <Suspense fallback={null}>
+          <SignInForm />
+        </Suspense>
       </AuthCard>
     </PageShell>
   );
