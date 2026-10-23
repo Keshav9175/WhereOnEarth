@@ -508,9 +508,9 @@ body {
   }
 
   .mobile-mode-carousel {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
-    height: 100%;
+    height: min(64dvw, 26rem);
     align-items: stretch;
     gap: 0.65rem;
     overflow-x: hidden;
@@ -542,7 +542,7 @@ body {
   }
 
   a.mobile-mode-card {
-    height: min(56dvw, 22rem);
+    height: 100%;
   }
 
   .mobile-mode-card-wrap > button.mobile-mode-card {
