@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { ArrowRight, Landmark } from "lucide-react";
 import {
   DEFAULT_MAP_ID,
-  MAPS,
+  LISTED_MAPS,
   MIN_COUNTRY_MAP_LOCATIONS,
   type Continent,
   type GameMap,
@@ -88,7 +88,7 @@ function WorldCard({ map, stats }: { map: GameMap; stats: MapStats }) {
 
 const FLAGS_PER_CARD = 7;
 
-// The hand-picked landmarks map: recommended as a first game, so it sits right under World.
+// Famous places (UNESCO World Heritage Sites): a highlight, so it sits right under World.
 function FamousCard({ map, stats }: { map: GameMap; stats: MapStats }) {
   return (
     <Link
@@ -102,11 +102,11 @@ function FamousCard({ map, stats }: { map: GameMap; stats: MapStats }) {
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h2 className="text-xl font-bold">{map.name}</h2>
           <span className="rounded-full bg-sky-400/15 px-2.5 py-0.5 text-xs font-semibold text-sky-200">
-            Best first game
+            UNESCO
           </span>
         </div>
         <p className="text-sm text-white/70">
-          {map.description} {stats.locations} landmarks, from the Eiffel Tower to Machu Picchu.
+          {map.description} {stats.locations.toLocaleString()} World Heritage Sites with Street View.
         </p>
       </div>
       <div aria-hidden="true" className="flex flex-wrap items-center gap-1.5 text-lg sm:max-w-xs sm:justify-end">
@@ -198,7 +198,7 @@ function CountryTile({ map }: { map: CountryMapEntry }) {
 
 // Country maps grouped under their continent (continents in the same order as the cards above).
 function CountrySection({ countries }: { countries: CountryMapEntry[] }) {
-  const groups = MAPS.filter((map) => map.continent).map((map) => ({
+  const groups = LISTED_MAPS.filter((map) => map.continent).map((map) => ({
     map,
     countries: countries.filter((country) => country.region === map.continent),
   }));
@@ -246,15 +246,15 @@ export async function MapLibrary() {
 
   return (
     <div className="flex flex-col gap-5">
-      {MAPS.map((map) =>
+      {LISTED_MAPS.map((map) =>
         map.id === DEFAULT_MAP_ID ? (
           <WorldCard key={map.id} map={map} stats={stats[map.id]} />
-        ) : map.featured ? (
+        ) : map.tag ? (
           <FamousCard key={map.id} map={map} stats={stats[map.id]} />
         ) : null,
       )}
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {MAPS.map((map) =>
+        {LISTED_MAPS.map((map) =>
           !map.continent ? null : (
             <li key={map.id} className="flex">
               <ContinentCard map={{ ...map, continent: map.continent }} stats={stats[map.id]} />

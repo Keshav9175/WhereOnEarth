@@ -1,4 +1,4 @@
-// The Famous places map: world-famous landmarks, each with a street-level point close to it.
+// The first-game map (new players' first game): world-famous landmarks, each with a street-level point close to it.
 // Chosen by us (public, well-known places; coordinates are approximate viewpoints). The seed script
 // asks Google for the nearest official outdoor panorama to each point and saves THAT position.
 // Spread over every continent, so a 5-round game visits 5 different countries.
@@ -10,7 +10,7 @@ export type FamousPlace = {
   lng: number;
 };
 
-export const FAMOUS_PLACES: FamousPlace[] = [
+export const FIRST_GAME_PLACES: FamousPlace[] = [
   { landmark: "Eiffel Tower", countryCode: "FR", lat: 48.8576, lng: 2.2953 },
   { landmark: "Colosseum", countryCode: "IT", lat: 41.8902, lng: 12.4929 },
   { landmark: "Big Ben", countryCode: "GB", lat: 51.5008, lng: -0.1246 },

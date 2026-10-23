@@ -28,8 +28,8 @@ const TIME_SEGMENTS = ROUND_TIME_CHOICES.map((seconds) => ({
 // "5 rounds · 60 s each · about 6 min" — so everyone knows what they're signing up for.
 function summary({ rounds, roundSeconds }: PartySettings) {
   if (roundSeconds === 0) return `${rounds} rounds · no time limit`;
-  // Each round = guessing time + about 15 s looking at the results.
-  const minutes = Math.max(1, Math.round((rounds * (roundSeconds + 15)) / 60));
+  // Each round = guessing time + a few seconds looking at the results.
+  const minutes = Math.max(1, Math.round((rounds * (roundSeconds + 5)) / 60));
   return `${rounds} rounds · ${roundSeconds} s each · about ${minutes} min`;
 }
 
@@ -94,7 +94,7 @@ export function PartyLobby({ view, send, onLeave, error }: PartyLobbyProps) {
             <h2 className="text-sm font-semibold tracking-wider text-white/70 uppercase">
               Players {view.players.length}/{MAX_PARTY_PLAYERS}
             </h2>
-            <ul className="flex flex-col gap-1.5">
+            <ul className="flex max-h-[22rem] flex-col gap-1.5 overflow-y-auto pr-1">
               {view.players.map((player) => (
                 <li
                   key={player.id}

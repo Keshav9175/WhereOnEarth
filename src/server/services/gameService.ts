@@ -38,9 +38,10 @@ async function recentLocationIds({ userId, guestId }: GameOwner): Promise<Types.
 }
 
 function sampleLocations(map: GameMap, excludeIds: Types.ObjectId[]) {
-  // Famous places → the landmarks; a country map → that country; a continent → that continent.
-  const onMap = map.featured
-    ? { featured: true }
+  // A tag map (Famous places, first game) → tagged locations; a country map → that country;
+  // a continent → that continent; World → everything.
+  const onMap = map.tag
+    ? { tags: map.tag }
     : map.countryCode
       ? { countryCode: map.countryCode }
       : map.continent

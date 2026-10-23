@@ -1,5 +1,5 @@
 import {
-  MAPS,
+  LISTED_MAPS,
   MIN_COUNTRY_MAP_LOCATIONS,
   countryMap,
   findMap,
@@ -26,7 +26,7 @@ export type MapStats = {
 export type CountryMapEntry = GameMap & { countryCode: string; locations: number; region: Continent | null };
 
 type CountryRow = {
-  _id: { continent: string | null; code: string | null; name: string; featured: boolean };
+  _id: { continent: string | null; code: string | null; name: string; tags: string[] | null };
   count: number;
 };
 
@@ -35,7 +35,7 @@ async function countryRows(): Promise<CountryRow[]> {
   return LocationModel.aggregate<CountryRow>([
     {
       $group: {
-        _id: { continent: "$continent", code: "$countryCode", name: "$country", featured: { $eq: ["$featured", true] } },
+        _id: { continent: "$continent", code: "$countryCode", name: "$country", tags: "$tags" },
         count: { $sum: 1 },
       },
     },
@@ -43,7 +43,7 @@ async function countryRows(): Promise<CountryRow[]> {
   ]);
 }
 
-// Adds up rows per country (a country can appear twice: its featured and its ordinary locations).
+// Adds up rows per country (a country can appear in several rows: its tagged and ordinary locations).
 function toStats(picked: CountryRow[]): MapStats {
   const byCode = new Map<string, MapCountry>();
   for (const row of picked) {
@@ -62,13 +62,13 @@ function toStats(picked: CountryRow[]): MapStats {
 export async function getMapStats(): Promise<Record<string, MapStats>> {
   const rows = await countryRows();
   const rowsFor = (map: GameMap) =>
-    map.featured
-      ? rows.filter((row) => row._id.featured)
+    map.tag
+      ? rows.filter((row) => row._id.tags?.includes(map.tag as string))
       : map.continent
         ? rows.filter((row) => row._id.continent === map.continent)
         : rows;
 
-  return Object.fromEntries(MAPS.map((map) => [map.id, toStats(rowsFor(map))]));
+  return Object.fromEntries(LISTED_MAPS.map((map) => [map.id, toStats(rowsFor(map))]));
 }
 
 // Every country with enough locations for its own map, A→Z.

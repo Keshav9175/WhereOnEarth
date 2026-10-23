@@ -5,7 +5,9 @@ import { z } from "zod";
 // schemas (never trust the client); anything that doesn't match is rejected.
 
 export const PARTY_CODE_LENGTH = 6;
-export const MAX_PARTY_PLAYERS = 8;
+// Each player uses their own Google Street View + map loads, so a big party eats the free daily quota fast
+// (20 players ≈ 40 of the 160 loads/day). The screens work with any number; raise this if quota allows.
+export const MAX_PARTY_PLAYERS = 20;
 // What the host can choose in the lobby. Only these exact values are accepted by the server.
 export const ROUND_COUNT_CHOICES = [3, 5, 7, 10] as const;
 export const DEFAULT_ROUNDS = 5;

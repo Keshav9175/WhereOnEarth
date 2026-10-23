@@ -46,7 +46,17 @@ export function PartyApp({ startWith, inviteCode }: PartyAppProps) {
   }
 
   if (!view) {
-    return <PartyEntry startWith={startWith} inviteCode={inviteCode} send={send} error={error} notice={closedMessage} />;
+    // After a party ends (e.g. the host left), its code is dead: start from an empty Join screen.
+    return (
+      <PartyEntry
+        key={closedMessage ?? "entry"}
+        startWith={closedMessage ? "join" : startWith}
+        inviteCode={closedMessage ? null : inviteCode}
+        send={send}
+        error={error}
+        notice={closedMessage}
+      />
+    );
   }
 
   if (view.phase === "lobby") {

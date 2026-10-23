@@ -24,7 +24,6 @@ const ALLOWED_ORIGINS = new Set(
 );
 
 const REJOIN_GRACE_MS = 60_000; // a dropped player keeps their seat this long
-const HOST_GRACE_MS = 15_000; // a dropped host keeps the host role this long (survives a refresh)
 const EMPTY_ROOM_TTL_MS = 5 * 60_000; // a party with nobody connected is closed after this
 const MESSAGES_PER_10S = 40; // flood protection per connection
 
@@ -102,6 +101,16 @@ function closeParty(code: string) {
   party.leaveTimers.forEach(clearTimeout);
   if (party.closeTimer) clearTimeout(party.closeTimer);
   parties.delete(code);
+}
+
+// The host left (or never came back): the party ends for everyone (like WorldGuessr). Each player gets a
+// message and goes back to the join screen; to play again, someone creates a new party.
+function disbandParty(party: Party, message: string) {
+  for (const connection of party.sockets.values()) {
+    send(connection, { type: "closed", message });
+    detach(connection);
+  }
+  closeParty(party.room.code);
 }
 
 // Nobody connected any more → close the party after a while (they might all just be refreshing).
@@ -186,9 +195,10 @@ async function handle(connection: Connection, message: ClientMessage) {
 
   switch (message.type) {
     case "leave": {
-      party.room.removePlayer(me);
+      const wasHost = party.room.removePlayer(me);
       party.sockets.delete(me);
       detach(connection);
+      if (wasHost) return disbandParty(party, "The host left, so the party has ended.");
       endRoundIfEveryoneGuessed(party);
       maybeScheduleClose(party.room.code);
       return broadcast(party);
@@ -314,21 +324,17 @@ server.on("connection", (socket) => {
     const playerId = connection.playerId;
     if (!party || !playerId || party.sockets.get(playerId) !== connection) return;
 
-    // Keep the seat for a minute (they may be refreshing), then remove them.
+    // Keep the seat for a minute (they may be refreshing), then remove them — for the host, that ends the party.
     party.sockets.delete(playerId);
     party.room.setConnected(playerId, false);
     endRoundIfEveryoneGuessed(party);
-    setTimeout(() => {
-      if (!parties.has(party.room.code)) return;
-      const hostBefore = party.room.hostId;
-      party.room.passHostIfStillAway(playerId);
-      if (party.room.hostId !== hostBefore) broadcast(party);
-    }, HOST_GRACE_MS);
     party.leaveTimers.set(
       playerId,
       setTimeout(() => {
         party.leaveTimers.delete(playerId);
-        party.room.removePlayer(playerId);
+        if (party.room.removePlayer(playerId)) {
+          return disbandParty(party, "The host lost connection, so the party has ended.");
+        }
         endRoundIfEveryoneGuessed(party);
         maybeScheduleClose(party.room.code);
         broadcast(party);

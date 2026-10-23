@@ -486,3 +486,20 @@ runs timers and passes events to the room. Same idea as our pure scoring functio
 ### Reconnecting
 Connections drop (Wi-Fi, refresh). The browser reconnects automatically and proves who it is with a secret token,
 and the server keeps the seat for a minute — so a refresh doesn't kick you out.
+
+## First-visit intro (D-025)
+
+### localStorage
+A small key–value store in the player's browser that survives closing the tab. We save
+`whereonearth:intro-seen = 1` there, so the intro only plays once per browser. The server can't read it.
+
+### Inline script before the first paint
+The server sends the same HTML to everyone, so it can't know whether *you* have seen the intro. A tiny script in
+`<head>` runs while the browser is still reading the page — before anything is drawn — and adds `data-intro="play"`
+to `<html>` if you haven't. CSS then shows the black intro screen straight away. Waiting for React (`useEffect`)
+would be too late: you would see the home page flash first.
+
+### useSyncExternalStore
+A React hook for reading values that live outside React (here: that `<html>` attribute). It takes one function for
+the browser and one for the server, so React can render "no intro" on the server and switch to the real value after
+loading without a hydration error.

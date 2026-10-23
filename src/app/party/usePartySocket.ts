@@ -71,6 +71,7 @@ export function usePartySocket() {
           sessionStorage.removeItem(SEAT_KEY);
           setView(null);
           setClosedMessage(message.message);
+          window.history.replaceState(null, "", "/party?join=1");
         }
       };
 

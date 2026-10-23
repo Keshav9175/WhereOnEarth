@@ -15,7 +15,9 @@
     "prebuild": "node scripts/copy-maplibre-worker.mjs",
     "backfill:locations": "tsx --env-file=.env.local scripts/backfill-locations.ts",
     "party": "tsx --env-file=.env.local src/party/server.ts",
-    "seed:famous": "tsx --env-file=.env.local scripts/seed-famous-places.ts"
+    "fetch:unesco": "tsx scripts/fetch-unesco-sites.ts",
+    "seed:first-game": "tsx --env-file=.env.local scripts/seed-first-game.ts",
+    "seed:unesco": "tsx --env-file=.env.local scripts/seed-unesco.ts"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.3",

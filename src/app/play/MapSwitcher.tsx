@@ -4,7 +4,7 @@ import "flag-icons/css/flag-icons.min.css";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown, Map as MapIcon } from "lucide-react";
-import { MAPS, type GameMap } from "@/lib/maps/catalog";
+import { LISTED_MAPS, type GameMap } from "@/lib/maps/catalog";
 
 // A country map in the list (just enough to show it and switch to it).
 export type CountryChoice = { id: string; name: string; countryCode: string };
@@ -104,7 +104,7 @@ export function MapSwitcher({ current, countryMaps, inProgress }: MapSwitcherPro
           </p>
           <div className="overflow-y-auto p-1.5">
             <p className={GROUP_LABEL}>Regions</p>
-            <ul>{MAPS.map((map) => option(map.id, map.name, null))}</ul>
+            <ul>{LISTED_MAPS.map((map) => option(map.id, map.name, null))}</ul>
             {countryMaps.length > 0 && (
               <>
                 <p className={GROUP_LABEL}>Countries</p>

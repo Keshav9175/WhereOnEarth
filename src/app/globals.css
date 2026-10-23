@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* `intro:flex` etc. apply only while the first-visit intro is playing (<html data-intro="play">,
+   set by the inline script in src/app/layout.tsx — see D-025). */
+@custom-variant intro (html[data-intro="play"] &);
+
+/* While the intro plays, drop the scrollbar and the space kept for it (scrollbar-gutter below),
+   so the intro covers the window edge to edge. */
+html[data-intro="play"] {
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
 /* Our colour palette as CSS variables. Dark mode swaps the values automatically. */
 :root {
   --bg: #f5f7fa;
@@ -37,6 +48,8 @@
   --color-card: var(--card);
   --color-border: var(--border);
   --color-error: var(--error);
+  /* Tailwind's default font (font-sans) = Figtree, loaded in src/app/layout.tsx. */
+  --font-sans: var(--font-figtree), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 /* The page background (navy ocean gradient) is set on <body> in src/app/layout.tsx, so it stays still
@@ -50,7 +63,8 @@ html {
 
 body {
   color: var(--fg);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Figtree everywhere; the system fonts only show if it fails to load. */
+  font-family: var(--font-figtree), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 /* Page-to-page transitions (src/components/PageTransition.tsx). The old page fades out where it is; the

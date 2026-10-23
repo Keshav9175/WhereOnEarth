@@ -38,7 +38,7 @@ type Round = {
 // Pin colours, one per player (in join order).
 // Round pacing, like WorldGuessr: results stay up this long before the next round starts by itself,
 // and the last player still guessing gets at most this long once everyone else has guessed.
-export const RESULTS_SECONDS = 10;
+export const RESULTS_SECONDS = 3;
 export const LAST_GUESSER_SECONDS = 20;
 
 export const PLAYER_COLORS = ["#2563eb", "#dc2626", "#d97706", "#7c3aed", "#db2777", "#0891b2", "#65a30d", "#ea580c"];
@@ -94,28 +94,17 @@ export class PartyRoom {
     return null;
   }
 
-  // A dropped connection does NOT hand over the host role straight away (a refresh would cost the host
-  // their crown); the server calls passHostIfStillAway() after a short wait instead.
+  // A dropped connection keeps the seat (and the host role) for a while, so a refresh costs nothing.
   setConnected(playerId: string, connected: boolean) {
     const player = this.players.get(playerId);
     if (player) player.connected = connected;
   }
 
-  passHostIfStillAway(playerId: string) {
-    if (playerId === this.hostId && this.players.get(playerId)?.connected === false) this.handOverHost();
-  }
-
-  removePlayer(playerId: string) {
+  // Removing the HOST ends the party (like WorldGuessr: the party belongs to whoever created it) —
+  // the server then sends everyone back to the join screen. Returns true when that happened.
+  removePlayer(playerId: string): boolean {
     this.players.delete(playerId);
-    if (playerId === this.hostId) this.handOverHost();
-  }
-
-  // The host left (or stayed away): the longest-waiting connected player becomes host.
-  private handOverHost() {
-    const next = [...this.players.values()]
-      .filter((player) => player.connected)
-      .sort((a, b) => a.joinedAt - b.joinedAt)[0];
-    if (next) this.hostId = next.id;
+    return playerId === this.hostId;
   }
 
   // ---------- Host controls ----------

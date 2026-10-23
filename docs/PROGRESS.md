@@ -1,6 +1,6 @@
 # Progress
 
-_Last updated: 2026-10-20_
+_Last updated: 2026-10-22_
 
 ## Current phase
 **The backend is complete (Phases 5 + 6).** Waiting for the owner's manual test (restart `npm run dev`
@@ -131,8 +131,10 @@ since `759bc48`. The owner pushes later.
   ✅ Country maps (2026-10-22): 41 countries with ≥ 20 spots, "Countries" section on /maps (grouped by continent, big
   flags) and in the in-game map list. Verified: curl jp/sn → 201 (Japan ×5), zz/FR → 400; Chrome: /maps countries, France
   and Japan games, no console errors (fixed a prerender error with `await connection()` in `src/app/play/page.tsx`).
-- ✅ First-game flow (2026-10-22, D-023): sign-in → home; sign out only on /profile; Famous places map (18 landmarks,
-  `npm run seed:famous`) as the first game (email: button on /email-verified; Google: newUserCallbackURL). Verified in
+- ✅ First-game flow (2026-10-22, D-026): sign-in → home; sign out only on /profile; hidden first-game map (18 landmarks,
+  `npm run seed:first-game`) as the first game; Famous places map = UNESCO World Heritage Sites (`npm run fetch:unesco`,
+  `npm run seed:unesco`): **692 of 1,286 sites** have Google Street View (Europe 402, Asia 156,
+  North America 58, South America 45, Africa 25, Oceania 6); 592 have none, 2 hit a temporary Google error (re-run to retry)) (email: button on /email-verified; Google: newUserCallbackURL). Verified in
   Chrome: top bar without sign-out, /maps Famous card, /profile Sign out button, a Famous places game starts.
   **Owner to test:** sign in → lands on home; a brand-new account → first game.
   Next: map choice on Create Party (static, Phase 9).
@@ -232,3 +234,9 @@ explain databases/MongoDB, then the owner creates a free MongoDB Atlas account a
   host-only actions, hidden answers, server scoring, rejoin) and a full 5-round game in Chrome against a bot
   (timer timeout, everyone-guessed early end, final standings, play again, refresh = same seat & host kept).
   91 tests pass. Next in Phase 9: Ranked/Unranked matchmaking; Phase 10: free hosting for the party server.
+- ✅ First-visit intro video (2026-10-22, Claude-built, D-025): 5 s logo intro (pin drop → shockwave reveals a dot-matrix world
+  map → globe grows → glides into the logo, letters pop, pin flies into the "O"); full-screen cover, landscape + portrait files. `public/intro.mp4` + `public/intro-portrait.mp4` plays full-screen
+  on `/` the first time only (`localStorage`), Skip button + Esc, fades into the home page, skipped for reduced motion.
+  Files: `src/lib/intro.ts`, `src/components/home/IntroVideo.tsx`, `<head>` script in `layout.tsx`, `intro:` variant in
+  `globals.css`. Verified in Chrome: plays on first visit, not on the second, Skip click + Esc work, fade to home, no
+  console/hydration warnings. tsc, lint, 103 tests, build clean.

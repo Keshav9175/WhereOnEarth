@@ -331,18 +331,25 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
   `PageShell` no longer takes `current`/`minimal` and no longer renders the bar.
 - **Status:** Accepted (2026-10-22).
 
-## D-023 — First game for new players: the Famous places map
-- **Decision:** signing in lands on the home screen (no auto-started game). A brand-new player's first game is the
-  **Famous places** map (`/play?map=famous`, `FIRST_GAME_URL` in `src/lib/maps/catalog.ts`): email users get a
-  "Play your first game" button on `/email-verified`; Google sign-ups go there directly via Better Auth's
-  `newUserCallbackURL`. Sign out moved from the top bar to `/profile`.
-- **Data:** 18 hand-picked landmarks (`scripts/data/famous-places.ts`, our own list) seeded by `npm run seed:famous`
-  as locations with `featured: true` + `landmark`. At famous spots the nearest panorama is usually a visitor photo
-  sphere (rejected, D-019), so the script probes rings of points (0–250 m, 8 directions, 30 m radius) until it finds
-  Google's own imagery. `source=google` also worked in a test but is **undocumented** (docs list only
-  `default`/`outdoor`), so we don't use it.
-- **Reference:** WorldGuessr gives new players an onboarding game on a fixed set of famous spots — behaviour studied
-  only; no code or data copied (PolyForm Noncommercial).
+## D-026 — First game for new players + Famous places = UNESCO World Heritage Sites
+- **Decision:** signing in lands on the home screen (no auto-started game); sign out lives on `/profile`.
+  Locations can carry **tags** (`Location.tags`), and maps can draw from one tag (`GameMap.tag`):
+  - **first-game** (hidden map, `/play?map=first-game`, `FIRST_GAME_URL`): 18 hand-picked landmarks
+    (`scripts/data/first-game-places.ts`, `npm run seed:first-game`). New email users get a "Play your first game"
+    button on `/email-verified`; new Google users go there directly (Better Auth `newUserCallbackURL`).
+  - **unesco** (**Famous places**, listed on /maps and in the in-game picker): one location per UNESCO World
+    Heritage Site with Google Street View. Site list from **Wikidata** (CC0, property P757 = World Heritage id;
+    `npm run fetch:unesco` → `scripts/data/unesco-sites.json`, 1,286 sites / 5,922 points incl. serial-site
+    components), then `npm run seed:unesco` searches each site for Google's own panorama and stores `unescoId` +
+    `landmark` (re-runnable; skips saved sites).
+- **Street View search:** at famous spots the nearest panorama is usually a visitor photo sphere (rejected, D-019),
+  so `scripts/officialPanorama.ts` probes rings of points (30 m radius each) until it hits Google imagery.
+  `source=google` worked in a test but is **undocumented** (docs list only `default`/`outdoor`), so we don't use it.
+- **No repeats:** tag maps use the same engine as every map — a player's last 100 games' locations are excluded,
+  5 different countries when possible (D-020 round picking).
+- **Why Wikidata, not UNESCO's own list:** CC0 public-domain data we may store; UNESCO's site content has its own terms.
+- **Reference:** WorldGuessr gives new players an onboarding game on famous spots — behaviour studied only; no code or
+  data copied (PolyForm Noncommercial).
 - **Status:** Accepted (2026-10-22).
 
 ## D-024 — Party mode (Phase 9 multiplayer): our own WebSocket server with `ws`
@@ -367,11 +374,13 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
 - **Lobby settings (2026-10-22):** the host picks the map (custom dropdown `src/components/ui/Select.tsx`, ARIA listbox),
   rounds 3/5/7/10 and time 30s/1m/90s/2m/no limit (`src/components/ui/SegmentedControl.tsx`, ARIA radio group); the
   server only accepts those values (Zod `z.literal([...])`); `pickGameLocations` takes the round count.
-- **Pacing & HUD (2026-10-22, like WorldGuessr — ideas only):** results show 10 s then the next round starts by itself
-  (host may Skip); when only one connected player is still guessing, their time drops to 20 s (also in "no limit"
-  rounds), with a 4 s notice. One server timer per party (`schedule`) handles both. HUD (`PartyHud.tsx`): 2 players =
-  two score bars (You left, opponent right); 3+ = your bar + place and compact standings (top 3 + you, "+N more");
-  round + big countdown in the middle. The Google map is restricted to one world (no repeats / grey bands).
+- **Pacing & HUD (2026-10-22, like WorldGuessr — ideas only):** results show 3 s on a full-screen map with one
+  small card ("It was X", your distance + points, the round's best), then the next round starts by itself; when only
+  one connected player is still guessing, their time drops to 20 s (also in "no limit" rounds), with a 4 s notice.
+  One server timer per party (`schedule`) handles both. HUD (`PartyHud.tsx`): 2 players = two score bars (You left,
+  opponent right) with the clock in the middle; 3+ players = only leave + player count (left) and round + clock
+  (right) — scores stay hidden until the final standings, so it looks the same with 3 or 100 players. The Google
+  map is restricted to one world (no repeats / grey bands).
 - **Online (2026-10-22):** website on Vercel, party server on Render free (`render.yaml`; Vercel Hobby closes
   connections after 300 s, and in-memory parties need one instance). Signed-in players prove their account with a
   5-minute HMAC-signed ticket from `/api/party/ticket` (`src/lib/party/ticket.ts`, shared `PARTY_SECRET`), because
@@ -379,3 +388,25 @@ Never edit an accepted decision silently. Add a new entry that supersedes it.
 - **Note:** decision numbers D-021…D-023 were each used twice/three times by two sessions working in parallel —
   renumber when the docs are next tidied.
 - **Status:** Accepted (2026-10-22).
+
+## D-025 — First-visit intro video on the home page
+- **Context:** the owner wanted a premium logo intro that plays only the first time a player opens the game.
+- **Decision:** a pre-rendered MP4 shown full-screen with `object-fit: cover` (fills the window like part of the app, no
+  black bars, no baked-in letterbox): `public/intro.mp4` (1920x1080) and `public/intro-portrait.mp4` (1080x1920, chosen
+  with `(orientation: portrait)`), 4.6 s, 30 fps, H.264, no audio. The concept (2026-10-22, redesigned for 5 s at the owner's request): a map pin drops,
+  its shockwave reveals a dot-matrix world map, the globe grows from the impact, glides into the logo while the letters
+  pop out from it, and the pin flies into the "O". It starts and ends on the app's ocean background (OCEAN_BACKGROUND). The logo sits in a "safe area" that stays
+  visible after cropping (landscape: down to 4:3 screens; portrait: down to 9:20 phones). While it plays, `<html>` drops
+  its scrollbar and `scrollbar-gutter`, so nothing peeks out at the right edge. It is shown
+  by `src/components/home/IntroVideo.tsx` on `/` only. "Seen" is remembered in `localStorage`
+  (`whereonearth:intro-seen`), set once the video actually starts playing (or on Skip). An inline script in the root
+  layout's `<head>` (`src/lib/intro.ts`) sets `<html data-intro="play">` before the first paint, following the
+  Next.js guide "Preventing flash before hydration"; the Tailwind variant `intro:` (globals.css) reveals the black
+  intro screen from that attribute. So returning players never see a flash, and the pages stay statically prerendered.
+- **Why not a cookie read on the server:** reading cookies in the root layout would make every page dynamic.
+  **Why not useEffect alone:** the home page would show for a moment before the intro covers it.
+- **Behaviour:** Skip button (focused, bottom-right) and Esc skip; it fades out (400 ms) into the home page — 5 s in total; it is
+  never shown to players with "reduced motion" turned on; if the video fails or hasn't started after 6 s it closes.
+  Per browser/device, not per account (a guest has no account on their first visit).
+- **Source files:** the video was made with a scratch HTML/canvas animation rendered by headless Chrome + ffmpeg
+  (not part of the app).

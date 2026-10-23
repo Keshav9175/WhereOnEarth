@@ -17,14 +17,16 @@ const km = (value: number) => `${Math.round(value).toLocaleString()} km`;
 
 // Seconds left in the round, using the SERVER's clock (clockOffset = server time − this computer's time),
 // so every player sees the same countdown.
-function useSecondsLeft(endsAt: number | null, clockOffset: number) {
+// (`undefined` too: an older party server doesn't send every time — never show "NaN".)
+function useSecondsLeft(endsAt: number | null | undefined, clockOffset: number) {
+  const known = typeof endsAt === "number" && Number.isFinite(endsAt);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (endsAt === null) return;
+    if (!known) return;
     const timer = window.setInterval(() => setNow(Date.now()), 250);
     return () => window.clearInterval(timer);
-  }, [endsAt]);
-  if (endsAt === null) return null;
+  }, [known, endsAt]);
+  if (!known) return null;
   return Math.max(0, Math.ceil((endsAt - (now + clockOffset)) / 1000));
 }
 
@@ -109,13 +111,15 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
   } else {
     const rounds = view.phase === "final" ? view.history.map(toMapRound) : view.result ? [toMapRound({ roundNumber: view.roundNumber, ...view.result })] : [];
     mapView = { mode: "party", rounds };
-    // Phones: top part of the screen; wide screens: everything left of the 24rem results panel.
-    mapBox = "inset-x-0 top-0 h-[45%] lg:right-[24rem] lg:h-full";
+    // Round results: the whole screen is map (like WorldGuessr). Final standings: map beside the panel.
+    mapBox = view.phase === "final" ? "inset-x-0 top-0 h-[45%] lg:right-[24rem] lg:h-full" : "inset-0";
   }
 
   const waitingFor = view.players.filter((player) => player.connected && !player.guessed).length;
   const standings = [...view.players].sort((a, b) => b.score - a.score);
   const roundRanking = [...(view.result?.guesses ?? [])].sort((a, b) => b.score - a.score);
+  const roundBest = roundRanking[0];
+  const myRoundGuess = view.result?.guesses.find((guess) => guess.playerId === view.you);
 
   return (
     <main className="relative isolate h-dvh overflow-hidden bg-[#01275e] text-white">
@@ -151,69 +155,12 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
         </div>
       )}
 
-      {/* ---------- Results / final: side panel ---------- */}
-      {view.phase !== "round" && (
+      {/* ---------- Final standings: side panel ---------- */}
+      {view.phase === "final" && (
         <section
           aria-live="polite"
           className="absolute inset-x-0 bottom-0 z-20 flex h-[55%] flex-col gap-4 overflow-y-auto border-white/10 bg-gradient-to-b from-[#062a5f] to-[#020f2b] p-5 shadow-2xl lg:inset-y-0 lg:left-auto lg:h-full lg:w-[24rem] lg:border-l lg:pt-24"
         >
-          {view.phase === "results" && view.result && (
-            <>
-              <div className="text-center">
-                <p className="text-xs font-semibold tracking-[0.25em] text-amber-300/90 uppercase">
-                  Round {view.roundNumber} of {view.totalRounds} · it was
-                </p>
-                <h2 className="mt-1 text-3xl font-extrabold">{view.result.country}</h2>
-              </div>
-              <ol className="flex flex-col gap-1.5">
-                {roundRanking.map((guess, index) => {
-                  const player = players.get(guess.playerId);
-                  return (
-                    <li key={guess.playerId} className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2">
-                      <span className="w-5 text-center text-sm font-bold text-white/60">{index + 1}</span>
-                      <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: player?.color }} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold">{player?.name ?? "Left the party"}</span>
-                        <span className="block text-xs text-white/55">{km(guess.distanceKm)} away</span>
-                      </span>
-                      <strong className="text-amber-300 tabular-nums">+{guess.score.toLocaleString()}</strong>
-                    </li>
-                  );
-                })}
-                {view.players
-                  .filter((player) => !view.result?.guesses.some((guess) => guess.playerId === player.id))
-                  .map((player) => (
-                    <li key={player.id} className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2 text-white/50">
-                      <span className="w-5" />
-                      <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: player.color }} />
-                      <span className="flex-1 truncate">{player.name}</span>
-                      <span className="text-xs">no guess · +0</span>
-                    </li>
-                  ))}
-              </ol>
-              {/* Moves on by itself after the countdown (like WorldGuessr); the host may skip ahead. */}
-              <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3" aria-live="polite">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">
-                    {view.roundNumber >= view.totalRounds ? "Final standings" : "Next round"} in{" "}
-                    <span className="text-amber-300 tabular-nums">{nextIn ?? 0}s</span>
-                  </p>
-                  <div aria-hidden="true" className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-sky-400 to-blue-600 transition-[width] duration-300 ease-linear"
-                      style={{ width: `${Math.min(100, ((nextIn ?? 0) / RESULTS_SECONDS) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-                {isHost && (
-                  <button type="button" onClick={() => send({ type: "next" })} className={`${SECONDARY_BUTTON} px-3 py-1.5 text-sm`}>
-                    Skip
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-
           {view.phase === "final" && (
             <>
               <div className="text-center">
@@ -256,9 +203,57 @@ export function PartyGame({ view, send, onLeave, clockOffset, error }: PartyGame
         </section>
       )}
 
-      {/* ---------- Top: the score HUD while playing; a small round label on the results ---------- */}
+      {/* ---------- Round results: ONE small card on the full-screen map (like WorldGuessr) ---------- */}
+      {view.phase === "results" && view.result && (
+        <section
+          aria-live="polite"
+          className={`${GLASS} absolute bottom-6 left-1/2 z-[500] flex w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 flex-col items-center gap-1.5 px-5 py-4 text-center`}
+        >
+          <p className="text-xs font-semibold tracking-[0.2em] text-amber-300/90 uppercase">
+            Round {view.roundNumber} of {view.totalRounds}
+          </p>
+          <h2 className="text-2xl font-extrabold">It was {view.result.country}</h2>
+          <p className="text-white/85">
+            {myRoundGuess ? (
+              <>
+                Your guess was <strong className="text-white">{km(myRoundGuess.distanceKm)}</strong> away ·{" "}
+                <strong className="text-amber-300">+{myRoundGuess.score.toLocaleString()}</strong>
+              </>
+            ) : (
+              <>
+                You didn&apos;t guess · <strong className="text-amber-300">+0</strong>
+              </>
+            )}
+          </p>
+          {roundBest && roundBest.playerId !== view.you && (
+            <p className="flex items-center gap-1.5 text-sm text-white/65">
+              Best:
+              <span aria-hidden="true" className="size-2.5 rounded-full" style={{ background: players.get(roundBest.playerId)?.color }} />
+              <span className="font-semibold text-white">{players.get(roundBest.playerId)?.name ?? "?"}</span>· {km(roundBest.distanceKm)} · +
+              {roundBest.score.toLocaleString()}
+            </p>
+          )}
+          {/* Next round in a few seconds — a thin bar that empties. */}
+          <div aria-hidden="true" className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-sky-400 to-blue-600 transition-[width] duration-300 ease-linear"
+              style={{ width: `${Math.min(100, ((nextIn ?? 0) / RESULTS_SECONDS) * 100)}%` }}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* ---------- Top: the score HUD while playing and on the results; a small label on the final ---------- */}
       {view.phase === "round" ? (
         <PartyHud view={view} secondsLeft={secondsLeft} onLeave={onLeave} />
+      ) : view.phase === "results" ? (
+        <PartyHud
+          view={view}
+          secondsLeft={nextIn}
+          centerLabel={view.roundNumber >= view.totalRounds ? "Final standings in" : "Next round in"}
+          calm
+          onLeave={onLeave}
+        />
       ) : (
         <header className="pointer-events-none absolute top-0 left-0 z-[600] p-3 sm:p-4">
           <p className={`${GLASS} flex items-center gap-3 px-4 py-2.5 text-sm font-semibold sm:text-base`}>

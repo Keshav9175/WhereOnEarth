@@ -55,10 +55,17 @@ describe("continentFromNaturalEarth", () => {
   });
 });
 
-describe("famous places map", () => {
-  it("exists, uses only featured locations, and is the first-game map", async () => {
-    const { FAMOUS_MAP_ID, FIRST_GAME_URL } = await import("./catalog");
-    expect(findMap(FAMOUS_MAP_ID)).toMatchObject({ featured: true, continent: null, countryCode: null });
-    expect(FIRST_GAME_URL).toBe(`/play?map=${FAMOUS_MAP_ID}`);
+describe("tag maps", () => {
+  it("Famous places draws from UNESCO sites and is listed", async () => {
+    const { FAMOUS_MAP_ID, LISTED_MAPS } = await import("./catalog");
+    expect(findMap(FAMOUS_MAP_ID)).toMatchObject({ tag: "unesco", hidden: false });
+    expect(LISTED_MAPS.some((map) => map.id === FAMOUS_MAP_ID)).toBe(true);
+  });
+
+  it("the first-game map is hidden and is where FIRST_GAME_URL points", async () => {
+    const { FIRST_GAME_MAP_ID, FIRST_GAME_URL, LISTED_MAPS } = await import("./catalog");
+    expect(findMap(FIRST_GAME_MAP_ID)).toMatchObject({ tag: "first-game", hidden: true });
+    expect(LISTED_MAPS.some((map) => map.id === FIRST_GAME_MAP_ID)).toBe(false);
+    expect(FIRST_GAME_URL).toBe(`/play?map=${FIRST_GAME_MAP_ID}`);
   });
 });

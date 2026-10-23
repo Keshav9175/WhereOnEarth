@@ -20,19 +20,25 @@ export type GameMap = {
   // A continent map uses `continent`, a country map uses `countryCode` ("FR"); World uses neither.
   continent: Continent | null;
   countryCode: string | null;
-  // The Famous places map: only hand-picked landmark locations (Location.featured).
-  featured: boolean;
+  // Tag maps draw only from locations carrying this tag (Location.tags): "unesco", "first-game".
+  tag: string | null;
+  // Hidden maps are playable by link but not listed in the map library or the in-game picker.
+  hidden: boolean;
 };
 
 export const DEFAULT_MAP_ID = "world";
 
-// A brand-new player's first game: a warm-up on world-famous landmarks (like WorldGuessr's onboarding).
+// Famous places: every UNESCO World Heritage Site that has Google Street View.
 export const FAMOUS_MAP_ID = "famous";
-export const FIRST_GAME_URL = `/play?map=${FAMOUS_MAP_ID}`;
+
+// A brand-new player's first game: 18 hand-picked landmarks (like WorldGuessr's onboarding).
+// Not listed anywhere; reached only through FIRST_GAME_URL.
+export const FIRST_GAME_MAP_ID = "first-game";
+export const FIRST_GAME_URL = `/play?map=${FIRST_GAME_MAP_ID}`;
 
 // The fixed maps: World + one per continent. Country maps are built from the database instead
 // (any country with enough locations — see MIN_COUNTRY_MAP_LOCATIONS), so they grow with the pool.
-const FIXED_MAPS: Omit<GameMap, "countryCode" | "featured">[] = [
+const FIXED_MAPS: Omit<GameMap, "countryCode" | "tag" | "hidden">[] = [
   {
     id: DEFAULT_MAP_ID,
     name: "World",
@@ -60,18 +66,33 @@ const FIXED_MAPS: Omit<GameMap, "countryCode" | "featured">[] = [
 const FAMOUS_MAP: GameMap = {
   id: FAMOUS_MAP_ID,
   name: "Famous places",
-  description: "World-famous landmarks. The perfect first game.",
+  description: "UNESCO World Heritage Sites: wonders, old towns and natural treasures.",
   continent: null,
   countryCode: null,
-  featured: true,
+  tag: "unesco",
+  hidden: false,
 };
 
-// World first, then Famous places, then the continents.
+const FIRST_GAME_MAP: GameMap = {
+  id: FIRST_GAME_MAP_ID,
+  name: "First game",
+  description: "World-famous landmarks: a warm-up for new players.",
+  continent: null,
+  countryCode: null,
+  tag: "first-game",
+  hidden: true,
+};
+
+// World first, then Famous places, then the continents (the hidden first-game map last).
 export const MAPS: GameMap[] = [
-  ...FIXED_MAPS.slice(0, 1),
+  ...FIXED_MAPS.slice(0, 1).map((map) => ({ ...map, countryCode: null, tag: null, hidden: false })),
   FAMOUS_MAP,
-  ...FIXED_MAPS.slice(1),
-].map((map) => ({ countryCode: null, featured: false, ...map }));
+  ...FIXED_MAPS.slice(1).map((map) => ({ ...map, countryCode: null, tag: null, hidden: false })),
+  FIRST_GAME_MAP,
+];
+
+// The maps players can browse and pick (everything except hidden ones).
+export const LISTED_MAPS = MAPS.filter((map) => !map.hidden);
 
 // A country needs this many locations to get its own map, so games don't repeat the same few spots.
 export const MIN_COUNTRY_MAP_LOCATIONS = 20;
@@ -92,7 +113,8 @@ export function countryMap(code: string, name: string): GameMap {
     description: `Every round somewhere in ${name}.`,
     continent: null,
     countryCode: code.toUpperCase(),
-    featured: false,
+    tag: null,
+    hidden: false,
   };
 }
 

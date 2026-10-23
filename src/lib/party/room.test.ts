@@ -34,23 +34,19 @@ describe("PartyRoom: joining", () => {
     expect(() => room.addPlayer({ id: "b", token: "token-b-xxxxxxxx", name: "Ana", userId: "user-1", now: 1 })).toThrow(PartyError);
   });
 
-  it("hands the host role to the next player when the host leaves", () => {
-    const room = roomWith("ana", "ben", "cai");
-    room.removePlayer("ana");
-    expect(room.hostId).toBe("ben");
-  });
 
   it("keeps the host role through a refresh, and passes it on only if the host stays away", () => {
     const room = roomWith("ana", "ben");
     room.setConnected("ana", false);
     expect(room.hostId).toBe("ana"); // a refresh mustn't cost the crown
     room.setConnected("ana", true);
-    room.passHostIfStillAway("ana");
-    expect(room.hostId).toBe("ana"); // came back in time
+    expect(room.hostId).toBe("ana");
+  });
 
-    room.setConnected("ana", false);
-    room.passHostIfStillAway("ana");
-    expect(room.hostId).toBe("ben"); // still away → Ben takes over
+  it("says the party is over when the HOST is removed, but not when anyone else is", () => {
+    const room = roomWith("ana", "ben", "cai");
+    expect(room.removePlayer("ben")).toBe(false);
+    expect(room.removePlayer("ana")).toBe(true);
   });
 
   it("finds a player by their rejoin token", () => {
@@ -104,7 +100,7 @@ describe("PartyRoom: pacing (like WorldGuessr)", () => {
     expect(room.viewFor("ben").endsAt).toBe(5_000 + LAST_GUESSER_SECONDS * 1000);
   });
 
-  it("shows the results for 10 seconds, then moves on by itself", () => {
+  it("shows the results for RESULTS_SECONDS, then moves on by itself", () => {
     const room = roomWith("ana");
     room.start("ana", FIVE_ROUNDS, 0);
     room.guess("ana", { lat: 1, lng: 1 }, 1_000);
