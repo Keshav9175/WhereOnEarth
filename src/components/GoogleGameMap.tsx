@@ -11,6 +11,11 @@ import {
   PIN_TIP_Y,
   playerPinSvg,
 } from "@/lib/map/pinSvg";
+import {
+  panCenterForRotatedDrag,
+  rotatedMapPixelToCoordinates,
+  screenToRotatedMapPixel,
+} from "@/lib/map/rotatedMapInteraction";
 import type { Coordinates } from "@/types/geo";
 
 export type SummaryRound = { roundNumber: number; guess: Coordinates; answer: Coordinates };
@@ -76,6 +81,7 @@ export function GoogleGameMap({ view, className = "" }: { view: GameMapView; cla
   const mapRef = useRef<google.maps.Map | null>(null);
   const libsRef = useRef<Libraries | null>(null);
   const overlaysRef = useRef<Overlay[]>([]);
+  const pointerAdapterCleanupRef = useRef<(() => void) | null>(null);
   const previousModeRef = useRef<GameMapView["mode"]>("hidden");
   // Google's click listener is added once, so it reads the LATEST view through this ref.
   const viewRef = useRef(view);
@@ -100,20 +106,27 @@ export function GoogleGameMap({ view, className = "" }: { view: GameMapView; cla
         ]);
         // React runs effects twice in development; only the surviving run creates the map.
         if (cancelled || !containerRef.current || mapRef.current) return;
+        const container = containerRef.current;
 
-        const map = new Map(containerRef.current, {
+        const forcedLandscape = window.matchMedia(
+          "(max-width: 600px) and (max-aspect-ratio: 9/16) and (pointer: coarse) and (orientation: portrait)",
+        );
+        const map = new Map(container, {
           ...WORLD_VIEW,
           minZoom: 1,
           mapId: MAP_ID,
           disableDefaultUI: true,
           zoomControl: true,
           clickableIcons: false, // clicking a shop or landmark mustn't open Google's info box
-          gestureHandling: "greedy", // scroll wheel zooms without holding Ctrl
+          // Google Maps calculates pointer positions incorrectly beneath a rotated CSS ancestor.
+          // In forced-landscape portrait mode, use our inverse-rotation pointer adapter below.
+          gestureHandling: forcedLandscape.matches ? "none" : "greedy",
           // Show ONE world only: in a wide or tall map box Google would otherwise repeat the world sideways
           // and add grey bands above and below. Google won't zoom out further than this fills the box.
           restriction: { latLngBounds: { north: 85, south: -85, west: -180, east: 180 }, strictBounds: true },
         });
         map.addListener("click", (clicked: google.maps.MapMouseEvent) => {
+          if (forcedLandscape.matches) return;
           const current = viewRef.current;
           if (current.mode === "guess" && clicked.latLng) {
             current.onGuessChange({ lat: clicked.latLng.lat(), lng: clicked.latLng.lng() });
@@ -122,13 +135,111 @@ export function GoogleGameMap({ view, className = "" }: { view: GameMapView; cla
 
         mapRef.current = map;
         libsRef.current = { Polyline, AdvancedMarkerElement, LatLngBounds, event };
+
+        type ActivePointer = { id: number; lastX: number; lastY: number; moved: boolean };
+        let activePointer: ActivePointer | null = null;
+        let downX = 0;
+        let downY = 0;
+        const onOrientationChange = () => {
+          map.setOptions({ gestureHandling: forcedLandscape.matches ? "none" : "greedy" });
+          container.style.touchAction = forcedLandscape.matches ? "none" : "";
+          activePointer = null;
+        };
+        const isMapControl = (target: EventTarget | null) =>
+          target instanceof Element && Boolean(target.closest("button, [role='button'], .gm-control-active"));
+        const localPixel = (clientX: number, clientY: number) => {
+          const rect = container.getBoundingClientRect();
+          return screenToRotatedMapPixel(clientX, clientY, rect);
+        };
+        const stopMapEvent = (pointerEvent: PointerEvent) => {
+          pointerEvent.preventDefault();
+          pointerEvent.stopImmediatePropagation();
+        };
+        const onPointerDown = (pointerEvent: PointerEvent) => {
+          if (!forcedLandscape.matches || isMapControl(pointerEvent.target)) return;
+          if (pointerEvent.pointerType === "mouse" && pointerEvent.button !== 0) return;
+          stopMapEvent(pointerEvent);
+          activePointer = {
+            id: pointerEvent.pointerId,
+            lastX: pointerEvent.clientX,
+            lastY: pointerEvent.clientY,
+            moved: false,
+          };
+          downX = pointerEvent.clientX;
+          downY = pointerEvent.clientY;
+          try {
+            container.setPointerCapture(pointerEvent.pointerId);
+          } catch {
+            // Some embedded browsers do not allow capture on this target; window events still work.
+          }
+        };
+        const onPointerMove = (pointerEvent: PointerEvent) => {
+          if (!forcedLandscape.matches || activePointer?.id !== pointerEvent.pointerId) return;
+          stopMapEvent(pointerEvent);
+          const screenDelta = {
+            x: pointerEvent.clientX - activePointer.lastX,
+            y: pointerEvent.clientY - activePointer.lastY,
+          };
+          if (Math.hypot(pointerEvent.clientX - downX, pointerEvent.clientY - downY) > 6) {
+            activePointer.moved = true;
+          }
+          activePointer.lastX = pointerEvent.clientX;
+          activePointer.lastY = pointerEvent.clientY;
+          if (!activePointer.moved) return;
+
+          const center = map.getCenter();
+          const zoom = map.getZoom();
+          if (!center || zoom === undefined) return;
+          map.setCenter(panCenterForRotatedDrag(center.toJSON(), zoom, screenDelta));
+        };
+        const finishPointer = (pointerEvent: PointerEvent) => {
+          if (!forcedLandscape.matches || activePointer?.id !== pointerEvent.pointerId) return;
+          stopMapEvent(pointerEvent);
+          const finished = activePointer;
+          activePointer = null;
+          if (container.hasPointerCapture(pointerEvent.pointerId)) {
+            container.releasePointerCapture(pointerEvent.pointerId);
+          }
+          if (finished.moved || viewRef.current.mode !== "guess") return;
+
+          const center = map.getCenter();
+          const zoom = map.getZoom();
+          if (!center || zoom === undefined) return;
+          const currentPixel = localPixel(pointerEvent.clientX, pointerEvent.clientY);
+          const point = rotatedMapPixelToCoordinates(
+            currentPixel,
+            { width: container.clientWidth, height: container.clientHeight },
+            center.toJSON(),
+            zoom,
+          );
+          viewRef.current.onGuessChange(point);
+        };
+
+        forcedLandscape.addEventListener("change", onOrientationChange);
+        container.style.touchAction = forcedLandscape.matches ? "none" : "";
+        container.addEventListener("pointerdown", onPointerDown, true);
+        container.addEventListener("pointermove", onPointerMove, true);
+        container.addEventListener("pointerup", finishPointer, true);
+        container.addEventListener("pointercancel", finishPointer, true);
+        container.addEventListener("lostpointercapture", finishPointer, true);
+        const removePointerAdapter = () => {
+          forcedLandscape.removeEventListener("change", onOrientationChange);
+          container.removeEventListener("pointerdown", onPointerDown, true);
+          container.removeEventListener("pointermove", onPointerMove, true);
+          container.removeEventListener("pointerup", finishPointer, true);
+          container.removeEventListener("pointercancel", finishPointer, true);
+          container.removeEventListener("lostpointercapture", finishPointer, true);
+          container.style.touchAction = "";
+        };
+
         resizeObserver = new ResizeObserver(() => {
           requestAnimationFrame(() => {
             if (!cancelled) event.trigger(map, "resize");
           });
         });
-        resizeObserver.observe(containerRef.current);
+        resizeObserver.observe(container);
         setReady(true);
+        pointerAdapterCleanupRef.current = removePointerAdapter;
       } catch {
         if (!cancelled) setError("The map could not load. Check your connection and refresh.");
       }
@@ -138,6 +249,8 @@ export function GoogleGameMap({ view, className = "" }: { view: GameMapView; cla
     return () => {
       cancelled = true;
       resizeObserver?.disconnect();
+      pointerAdapterCleanupRef.current?.();
+      pointerAdapterCleanupRef.current = null;
     };
   }, []);
 
